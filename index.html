@@ -351,19 +351,69 @@
         let peer = null;
         
         function initPeer() {
+            // Clean up existing peer if any
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            
             peer = new Peer(null, {
-                debug: 2
+                debug: 2,
+                config: {
+                    iceServers: [
+                        { url: 'stun:stun.l.google.com:19302' },
+                        { url: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
             });
             
             peer.on('open', (id) => {
                 gameState.peerId = id;
                 console.log('Peer ID:', id);
+                // Signal that peer is ready
+                gameState.peerReady = true;
             });
             
             peer.on('error', (err) => {
                 console.error('Peer error:', err);
-                updateConnectionStatus('ERROR: ' + err.type);
+                gameState.peerReady = false;
+                
+                // Handle specific error types
+                if (err.type === 'peer-unavailable') {
+                    showErrorAndReset('Host not found! Please check the Room ID and try again.');
+                } else if (err.type === 'invalid-id') {
+                    showErrorAndReset('Invalid Room ID format. Please check and try again.');
+                } else if (err.type === 'unavailable-id') {
+                    showErrorAndReset('Room ID is already taken. Host may have disconnected.');
+                } else {
+                    showErrorAndReset('Network error: ' + err.type + '. Please try again.');
+                }
             });
+        }
+        
+        function showErrorAndReset(message) {
+            // Hide loading overlay
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('host-waiting').classList.add('hidden');
+            
+            // Show error alert
+            alert(message);
+            
+            // Reset UI to main menu
+            document.getElementById('menu-overlay').classList.remove('hidden');
+            document.getElementById('host-waiting').classList.add('hidden');
+            
+            // Reset game state
+            gameState.menu = 'MENU';
+            gameState.isHost = false;
+            gameState.peerReady = false;
+            updateConnectionStatus('DISCONNECTED', 'status-disconnected');
+            
+            // Destroy peer
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
         }
         
         function hostGame() {
@@ -377,22 +427,19 @@
             
             document.getElementById('menu-overlay').classList.add('hidden');
             document.getElementById('host-waiting').classList.remove('hidden');
+            // Display the generated Room ID clearly
             document.getElementById('room-id-text').textContent = gameState.peerId;
             
             updateConnectionStatus('WAITING', 'status-waiting');
             
+            // Listen for incoming connections
             peer.on('connection', (conn) => {
                 gameState.conn = conn;
                 setupConnection();
                 
-                document.getElementById('host-waiting').classList.add('hidden');
-                document.getElementById('loading-overlay').classList.remove('hidden');
-                document.getElementById('loading-text').textContent = 'Opponent Connected!';
-                document.getElementById('loading-status').textContent = 'Starting game...';
-                
-                setTimeout(() => {
-                    startGame();
-                }, 1500);
+                // Note: Game will start when client sends 'clientReady' signal
+                // This UI update is just to show connection was received
+                console.log('Client connected, waiting for ready signal...');
             });
         }
         
@@ -413,19 +460,39 @@
             document.getElementById('menu-overlay').classList.add('hidden');
             document.getElementById('loading-overlay').classList.remove('hidden');
             document.getElementById('loading-text').textContent = 'Connecting to Host...';
+            document.getElementById('loading-status').textContent = 'Establishing connection...';
             
             const conn = peer.connect(hostId);
             gameState.conn = conn;
             
+            // Set timeout for connection attempt
+            let connectionTimeout = setTimeout(() => {
+                if (gameState.menu === 'CONNECTING') {
+                    showErrorAndReset('Connection timed out! The host may be offline or the Room ID is incorrect.');
+                }
+            }, 10000); // 10 second timeout
+            
             conn.on('open', () => {
+                clearTimeout(connectionTimeout);
                 setupConnection();
                 
-                document.getElementById('loading-status').textContent = 'Connected! Waiting for host...';
+                document.getElementById('loading-status').textContent = 'Connected! Waiting for host to start game...';
+                
+                // Send ready signal to host
+                conn.send({ type: 'clientReady', playerId: 'client' });
             });
             
             conn.on('error', (err) => {
+                clearTimeout(connectionTimeout);
                 console.error('Connection error:', err);
-                document.getElementById('loading-status').textContent = 'Connection failed!';
+                showErrorAndReset('Connection failed! Please check the Room ID and try again.');
+            });
+            
+            conn.on('close', () => {
+                clearTimeout(connectionTimeout);
+                if (gameState.menu === 'CONNECTING') {
+                    showErrorAndReset('Connection closed by host. Please try again.');
+                }
             });
         }
         
@@ -455,10 +522,27 @@
                         player.input = data.input;
                     }
                 }
+                // Host receives client ready signal
+                if (data.type === 'clientReady') {
+                    console.log('Client is ready, starting game...');
+                    // Start the game now that client is connected
+                    document.getElementById('host-waiting').classList.add('hidden');
+                    document.getElementById('loading-overlay').classList.remove('hidden');
+                    document.getElementById('loading-text').textContent = 'Opponent Connected!';
+                    document.getElementById('loading-status').textContent = 'Starting game...';
+                    
+                    setTimeout(() => {
+                        startGame();
+                    }, 1000);
+                }
             } else {
                 // Client receives game state
                 if (data.type === 'gameState') {
                     syncGameState(data.state);
+                }
+                // Client receives game start signal
+                if (data.type === 'startGame') {
+                    startGame();
                 }
             }
         }
