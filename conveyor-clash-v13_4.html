@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CONVEYOR CLASH v13</title>
+<title>CONVEYOR CLASH v13.4</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#000;overflow:hidden;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;user-select:none}
@@ -198,7 +198,7 @@ canvas{display:block;width:100vw;height:100vh;outline:none}
 <script>
 'use strict';
 /*******************************
-  CONVEYOR CLASH v13
+  CONVEYOR CLASH v13.4
   - v12 fixes preserved (visibility, networking, reconnect)
   - Conveyor cooldown (2s)
   - Upgrade system: Strike[E], Bullet[R], Fortify[F]
@@ -352,6 +352,59 @@ const SoundManager={
   }
 };
 SoundManager.init();
+
+// ===== BACKGROUND KEEP-ALIVE (prevents tab throttling when host is on another tab) =====
+// Two-layer strategy:
+//   1) Silent Web Audio oscillator — Chrome/Firefox/Edge won't throttle a tab that's making sound.
+//   2) Web Worker heartbeat — workers are NOT throttled in background; the heartbeat keeps
+//      posting 'tick' messages so the main thread gets scheduled even when the tab is hidden.
+const BackgroundKeepAlive={
+  audioCtx:null,oscillator:null,gainNode:null,
+  worker:null,workerUrl:null,
+  active:false,
+  start(){
+    if(this.active)return;
+    // Layer 1: silent oscillator
+    try{
+      const Ctx=window.AudioContext||window.webkitAudioContext;
+      if(Ctx){
+        this.audioCtx=new Ctx();
+        if(this.audioCtx.state==='suspended'){this.audioCtx.resume().catch(()=>{})}
+        this.oscillator=this.audioCtx.createOscillator();
+        this.gainNode=this.audioCtx.createGain();
+        this.gainNode.gain.value=0.0001; // essentially silent
+        this.oscillator.connect(this.gainNode);
+        this.gainNode.connect(this.audioCtx.destination);
+        this.oscillator.start();
+      }
+    }catch(e){console.warn('[keepalive] audio failed:',e)}
+    // Layer 2: worker heartbeat
+    try{
+      const workerCode='setInterval(()=>postMessage("tick"),'+Math.round(TICK*1000)+');';
+      const blob=new Blob([workerCode],{type:'application/javascript'});
+      this.workerUrl=URL.createObjectURL(blob);
+      this.worker=new Worker(this.workerUrl);
+      this.worker.onmessage=(e)=>{
+        if(e.data!=='tick')return;
+        onWorkerTick();
+      };
+      this.worker.onerror=(e)=>{console.warn('[keepalive] worker error:',e.message||e)};
+    }catch(e){console.warn('[keepalive] worker failed:',e)}
+    // Only mark as active if the worker actually started — otherwise the
+    // fallback setInterval (in startGameTicks) must keep driving ticks.
+    this.active=(this.worker!==null);
+    console.log('[keepalive] '+(this.active?'started (host background execution enabled)':'worker unavailable — using setInterval fallback'));
+  },
+  stop(){
+    if(this.oscillator){try{this.oscillator.stop()}catch(e){}this.oscillator=null}
+    if(this.audioCtx){try{this.audioCtx.close()}catch(e){}this.audioCtx=null}
+    if(this.worker){try{this.worker.terminate()}catch(e){}this.worker=null}
+    if(this.workerUrl){try{URL.revokeObjectURL(this.workerUrl)}catch(e){}this.workerUrl=null}
+    this.gainNode=null;
+    this.active=false;
+    console.log('[keepalive] stopped');
+  }
+};
 
 // ===== VISUAL EFFECTS =====
 let floatingTexts=[];
@@ -833,13 +886,14 @@ function handleRelayMessage(data){
   }
 }
 
-function createRoom(){isHost=true;myIndex=0;practiceMode=false;relayUrl='';httpBase='';resolveRelayUrls();if(!relayUrl){document.getElementById('status').textContent='Enter Relay Server URL below!';return}connectRelay(()=>{relaySend({action:'create'})})}
-function joinRoom(){isHost=false;myIndex=1;practiceMode=false;const rid=document.getElementById('join-input').value.trim().toUpperCase();if(!rid){document.getElementById('status').textContent='Enter a Room Code';return}relayUrl='';httpBase='';resolveRelayUrls();if(!relayUrl){document.getElementById('status').textContent='Enter Relay Server URL below!';return}connectRelay(()=>{relaySend({action:'join',roomId:rid})})}
-function cancelWaiting(){if(ws){try{ws.close()}catch(e){}}ws=null;pollClose();transport=null;connected=false;roomId=null;document.getElementById('waiting-screen').style.display='none';document.getElementById('menu').style.display='flex';document.getElementById('status').textContent=''}
+function createRoom(){isHost=true;myIndex=0;practiceMode=false;relayUrl='';httpBase='';resolveRelayUrls();if(!relayUrl){document.getElementById('status').textContent='Enter Relay Server URL below!';return}BackgroundKeepAlive.start();connectRelay(()=>{relaySend({action:'create'})})}
+function joinRoom(){isHost=false;myIndex=1;practiceMode=false;const rid=document.getElementById('join-input').value.trim().toUpperCase();if(!rid){document.getElementById('status').textContent='Enter a Room Code';return}relayUrl='';httpBase='';resolveRelayUrls();if(!relayUrl){document.getElementById('status').textContent='Enter Relay Server URL below!';return}BackgroundKeepAlive.start();connectRelay(()=>{relaySend({action:'join',roomId:rid})})}
+function cancelWaiting(){if(ws){try{ws.close()}catch(e){}}ws=null;pollClose();transport=null;connected=false;roomId=null;BackgroundKeepAlive.stop();document.getElementById('waiting-screen').style.display='none';document.getElementById('menu').style.display='flex';document.getElementById('status').textContent=''}
 function copyRoomId(){const rid=document.getElementById('waiting-room-id').textContent;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(rid).then(()=>{const btn=document.querySelector('#waiting-screen .copy-btn');btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy Room Code',1500)}).catch(()=>{const range=document.createRange();range.selectNode(document.getElementById('waiting-room-id'));window.getSelection().removeAllRanges();window.getSelection().addRange(range)})}else{const range=document.createRange();range.selectNode(document.getElementById('waiting-room-id'));window.getSelection().removeAllRanges();window.getSelection().addRange(range)}}
 
 function backToMenu(){
   gameState=null;stopGameTicks();
+  BackgroundKeepAlive.stop();
   prevGuestState=null;curGuestState=null;
   if(ws){try{ws.close()}catch(e){}}
   ws=null;pollClose();transport=null;connected=false;roomId=null;
@@ -853,7 +907,7 @@ function backToMenu(){
   initCustomization();
 }
 
-function startPractice(){isHost=true;myIndex=0;practiceMode=true;aiPaused=false;gameState=createGameState();startGameTicks();document.getElementById('menu').style.display='none';SoundManager.resume();canvas.focus()}
+function startPractice(){isHost=true;myIndex=0;practiceMode=true;aiPaused=false;gameState=createGameState();BackgroundKeepAlive.start();startGameTicks();document.getElementById('menu').style.display='none';SoundManager.resume();canvas.focus()}
 function showTutorial(){document.getElementById('tutorial-overlay').style.display='flex'}
 function hideTutorial(){document.getElementById('tutorial-overlay').style.display='none'}
 
@@ -1393,11 +1447,77 @@ function drawHUD(gs){
 /*** GAME LOOP ***/
 let gameTickInterval=null;
 
+// Worker-driven tick: runs even when the host's tab is in the background.
+// The Web Worker (BackgroundKeepAlive.worker) posts 'tick' every TICK seconds;
+// workers are NOT throttled by the browser, so this keeps the host's authoritative
+// simulation alive while the host is on another tab. The silent Web Audio oscillator
+// additionally prevents the main thread from being throttled, so messages are
+// processed in real time (smooth 30 Hz) rather than in 1 Hz bursts.
+let _lastNetSync=0;
+function onWorkerTick(){
+  if(!gameState)return;
+  if(isHost||practiceMode){
+    if(gameState.phase!=='gameover'&&gameState.phase!=='menu'){
+      updateGame(gameState,TICK);
+    }
+    // Send state to guest every 50ms (matches v6_2 cadence)
+    if(!practiceMode&&connected){
+      const now=performance.now();
+      if(now-_lastNetSync>50){
+        const statePayload=stripStateForNetwork(gameState);
+        const serialized=JSON.stringify(statePayload);
+        if(serialized.length<16384){
+          relaySend({action:'data',payload:{t:'s',s:statePayload}});
+          _lastNetSync=now;
+        }
+      }
+    }
+  }else{
+    // Guest: send input to host every 33ms (matches v6_2 cadence)
+    if(connected){
+      const now=performance.now();
+      if(now-_lastNetSync>33){
+        const inp=captureInput();
+        relaySend({action:'data',payload:{t:'i',...inp,playerShape,playerColor}});
+        _lastNetSync=now;
+      }
+    }
+  }
+}
+
+// Fallback ticker: only fires if the Web Worker is unavailable.
+// When BackgroundKeepAlive is active, this is a no-op because the worker
+// already drives ticks at full speed (even in background tabs).
 function startGameTicks(){
   if(gameTickInterval)return;
   gameTickInterval=setInterval(()=>{
+    if(BackgroundKeepAlive.active)return; // worker drives ticks
     if(!gameState)return;
-    if(isHost||practiceMode){updateGame(gameState,TICK)}
+    if(isHost||practiceMode){
+      if(gameState.phase!=='gameover'&&gameState.phase!=='menu'){
+        updateGame(gameState,TICK);
+      }
+      // Fallback state sync (only used if worker unavailable)
+      if(!practiceMode&&connected){
+        const now=performance.now();
+        if(now-_lastNetSync>50){
+          const statePayload=stripStateForNetwork(gameState);
+          const serialized=JSON.stringify(statePayload);
+          if(serialized.length<16384){
+            relaySend({action:'data',payload:{t:'s',s:statePayload}});
+            _lastNetSync=now;
+          }
+        }
+      }
+    }else if(connected){
+      // Fallback guest input sync (only used if worker unavailable)
+      const now=performance.now();
+      if(now-_lastNetSync>33){
+        const inp=captureInput();
+        relaySend({action:'data',payload:{t:'i',...inp,playerShape,playerColor}});
+        _lastNetSync=now;
+      }
+    }
   },Math.round(TICK*1000));
 }
 
@@ -1441,29 +1561,13 @@ function gameLoop(ts){
   const dt=Math.min((ts-lastTime)/1000,0.1);lastTime=ts;
   if(!gameState){ctx.fillStyle='#0a0a1e';ctx.fillRect(0,0,W,H);return}
 
+  // NOTE: game ticks + network sync are driven by onWorkerTick() (Web Worker heartbeat),
+  // which keeps running even when this tab is in the background. This rAF callback is
+  // rendering-only, so the host's game no longer pauses when they switch tabs.
   if(isHost||practiceMode){
     animTime=gameState.time;
     render(gameState);
-    if(!practiceMode&&connected){
-      const now=performance.now();
-      if(now-lastInputSent>200){
-        const statePayload=stripStateForNetwork(gameState);
-        const serialized=JSON.stringify(statePayload);
-        if(serialized.length<8192){
-          relaySend({action:'data',payload:{t:'s',s:statePayload}});
-          lastInputSent=now;
-        }
-      }
-    }
   }else{
-    if(connected){
-      const now=performance.now();
-      if(now-lastInputSent>100){
-        const inp=captureInput();
-        relaySend({action:'data',payload:{t:'i',...inp,playerShape,playerColor}});
-        lastInputSent=now;
-      }
-    }
     if(gameState){
       const renderState=interpolateGuestState()||gameState;
       animTime=renderState.time;
