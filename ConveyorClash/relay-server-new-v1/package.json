@@ -1,0 +1,11 @@
+{
+  "name": "game-relay",
+  "version": "1.0.0",
+  "description": "WebSocket relay server for Conveyor Clash multiplayer",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

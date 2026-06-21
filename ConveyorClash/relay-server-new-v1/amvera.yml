@@ -1,0 +1,19 @@
+---
+meta:
+  environment: bun
+  toolchain:
+    name: bun
+    version: 1.2
+build:
+  skip: false
+  additionalCommands: null
+  artifacts:
+    '*': /
+run:
+  persistenceMount: /data
+  scriptName: index.ts
+  scriptArguments: --hot
+  bunArguments: null
+  command: null
+  containerPort: 3042
+  servicePort: 80

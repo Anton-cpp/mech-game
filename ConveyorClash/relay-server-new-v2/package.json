@@ -1,0 +1,16 @@
+{
+  "name": "conveyor-clash-relay",
+  "version": "14.0.0",
+  "description": "WebSocket + HTTP polling relay server for Conveyor Clash v14 (supports 2v2)",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "bun index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.13"
+  }
+}
