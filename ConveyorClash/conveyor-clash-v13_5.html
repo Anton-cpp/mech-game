@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONVEYOR CLASH v13.5</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;user-select:none}
+canvas{display:block;width:100vw;height:100vh;outline:none}
+#menu{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(0,20,40,0.97) 0%,rgba(0,0,0,0.99) 100%);z-index:10;overflow-y:auto;padding:10px 20px}
+#menu h1{color:#0ff;font-size:clamp(28px,5vw,52px);margin-bottom:3px;text-shadow:0 0 30px #0ff,0 0 60px #08f;letter-spacing:4px;font-weight:900}
+#menu h2{color:#f60;font-size:clamp(12px,2vw,22px);margin-bottom:20px;letter-spacing:8px;text-transform:uppercase;font-weight:300}
+.menu-btn{padding:10px 36px;margin:5px;font-size:15px;border:2px solid #0ff;background:transparent;color:#0ff;cursor:pointer;transition:all .3s;font-family:inherit;letter-spacing:2px;text-transform:uppercase;outline:none}
+.menu-btn:hover{background:#0ff;color:#000;box-shadow:0 0 20px #0ff}
+.menu-btn.orange{border-color:#f60;color:#f60}
+.menu-btn.orange:hover{background:#f60;color:#000;box-shadow:0 0 20px #f60}
+.menu-btn.green{border-color:#0f0;color:#0f0}
+.menu-btn.green:hover{background:#0f0;color:#000;box-shadow:0 0 20px #0f0}
+.menu-btn.yellow{border-color:#ff0;color:#ff0}
+.menu-btn.yellow:hover{background:#ff0;color:#000;box-shadow:0 0 20px #ff0}
+#room-info{color:#0f0;margin-top:20px;font-size:18px;display:none;text-align:center}
+#room-info span{color:#ff0;font-size:20px;letter-spacing:2px;display:block;margin-top:5px;word-break:break-all}
+#join-input{padding:12px;font-size:18px;background:#0a0a1a;border:2px solid #f60;color:#f60;width:320px;text-align:center;margin-top:10px;font-family:monospace;letter-spacing:1px;outline:none}
+#join-input::placeholder{color:#630}
+#status{color:#aaa;margin-top:10px;font-size:13px;text-align:center;max-width:450px}
+#controls-info{color:#666;margin-top:15px;font-size:10px;text-align:center;line-height:1.8}
+#controls-info kbd{background:#1a1a2a;border:1px solid #444;padding:2px 6px;border-radius:3px;color:#0ff;font-size:10px}
+/* Customization section */
+.customize-section{margin-top:4px;text-align:center}
+.customize-section .label{color:#888;font-size:11px;letter-spacing:1px;margin-bottom:3px}
+.customize-select{padding:6px 12px;font-size:13px;background:#0a0a1a;border:2px solid #0ff;color:#0ff;font-family:monospace;outline:none;cursor:pointer;appearance:auto;min-width:160px;text-align:center}
+.customize-select option{background:#0a0a1a;color:#0ff}
+.color-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:4px 0}
+.color-swatch{width:24px;height:24px;border:2px solid #444;border-radius:50%;cursor:pointer;transition:all .2s}
+.color-swatch:hover{transform:scale(1.2);box-shadow:0 0 8px currentColor}
+.color-swatch.selected{border-color:#fff;box-shadow:0 0 12px currentColor;transform:scale(1.15)}
+/* Waiting screen */
+#waiting-screen{display:none;position:fixed;top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(0,20,40,0.97) 0%,rgba(0,0,0,0.99) 100%);z-index:10}
+#waiting-screen h2{color:#0ff;font-size:32px;margin-bottom:20px;animation:pulse 2s ease-in-out infinite}
+#waiting-screen .room-display{color:#ff0;font-size:28px;font-family:monospace;letter-spacing:3px;margin:15px 0;padding:15px 30px;background:rgba(255,255,0,0.08);border:2px solid #ff0;word-break:break-all;max-width:80%;text-align:center}
+#waiting-screen .hint{color:#888;font-size:14px;margin-top:10px;text-align:center;max-width:400px;line-height:1.6}
+#waiting-screen .copy-btn{margin-top:15px;padding:10px 30px;font-size:15px;border:2px solid #0f0;background:transparent;color:#0f0;cursor:pointer;transition:all .3s;font-family:inherit;letter-spacing:1px}
+#waiting-screen .copy-btn:hover{background:#0f0;color:#000;box-shadow:0 0 15px #0f0}
+#waiting-screen .cancel-btn{margin-top:15px;padding:10px 30px;font-size:14px;border:2px solid #f44;background:transparent;color:#f44;cursor:pointer;transition:all .3s;font-family:inherit;letter-spacing:1px}
+#waiting-screen .cancel-btn:hover{background:#f44;color:#000}
+#waiting-screen .relay-status{color:#888;font-size:11px;margin-top:10px;font-family:monospace}
+#waiting-screen .relay-status.connected{color:#0f0}
+#waiting-screen .relay-status.error{color:#f44}
+#menu .relay-status{color:#888;font-size:11px;margin-top:8px;font-family:monospace}
+#menu .relay-status.connected{color:#0f0}
+#menu .relay-status.error{color:#f44}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+#tutorial-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.92);z-index:20;overflow-y:auto;padding:30px}
+#tutorial-overlay h2{color:#0ff;font-size:28px;margin-bottom:20px;letter-spacing:3px}
+#tutorial-overlay .tutorial-content{max-width:700px;color:#ccc;font-size:14px;line-height:1.8;text-align:left}
+#tutorial-overlay .tutorial-content h3{color:#ff0;font-size:16px;margin-top:18px;margin-bottom:6px;letter-spacing:1px}
+#tutorial-overlay .tutorial-content .highlight{color:#0ff;font-weight:bold}
+#tutorial-overlay .tutorial-content .energy-hl{color:#ff0;font-weight:bold}
+#tutorial-overlay .tutorial-content .enemy-hl{color:#f60;font-weight:bold}
+#tutorial-overlay .close-tutorial{margin-top:25px;padding:12px 40px;font-size:16px;border:2px solid #0ff;background:transparent;color:#0ff;cursor:pointer;transition:all .3s;font-family:inherit;letter-spacing:2px;text-transform:uppercase}
+#tutorial-overlay .close-tutorial:hover{background:#0ff;color:#000;box-shadow:0 0 20px #0ff}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="menu">
+  <h1>CONVEYOR CLASH</h1>
+  <h2>Mechs &amp; Logistics</h2>
+  <button class="menu-btn green" onclick="startPractice()">Solo Practice</button>
+  <button class="menu-btn" onclick="createRoom()">Create Room</button>
+  <div id="join-section" style="display:flex;flex-direction:column;align-items:center">
+    <input id="join-input" placeholder="Paste Room Code here">
+    <button class="menu-btn orange" onclick="joinRoom()">Join Room</button>
+  </div>
+  <button class="menu-btn yellow" onclick="showTutorial()">How To Play</button>
+  <!-- Customization via dropdowns -->
+  <div class="customize-section">
+    <div class="label">YOUR MECH</div>
+    <div style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap">
+      <div>
+        <div style="color:#666;font-size:9px;margin-bottom:2px">COLOR</div>
+        <div class="color-row" id="color-picker"></div>
+      </div>
+      <div>
+        <div style="color:#666;font-size:9px;margin-bottom:2px">SHAPE</div>
+        <select id="shape-select" class="customize-select" onchange="onShapeChange(this.value)">
+          <option value="arrow">Arrow</option>
+          <option value="diamond">Diamond</option>
+          <option value="triangle">Triangle</option>
+          <option value="square">Square</option>
+          <option value="circle">Circle</option>
+          <option value="star">Star</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="status"></div>
+  <div id="relay-config" style="margin-top:12px;text-align:center">
+    <div style="color:#888;font-size:12px;margin-bottom:6px;letter-spacing:1px">RELAY SERVER</div>
+    <select id="relay-select" class="customize-select" onchange="onRelaySelectChange()">
+      <option value="replit">Replit (Recommended)</option>
+      <option value="amvera">Amvera</option>
+      <option value="custom">Custom Server</option>
+    </select>
+    <div id="custom-url-row" style="display:none;margin-top:6px">
+      <input id="relay-url-input" placeholder="wss://your-server.amvera.io"
+        style="padding:10px;font-size:14px;background:#0a0a1a;border:2px solid #0ff;color:#0ff;width:360px;text-align:center;font-family:monospace;outline:none">
+      <button class="menu-btn" style="padding:6px 20px;font-size:11px;margin-top:6px" onclick="testRelay()">Test Connection</button>
+    </div>
+    <div class="relay-status" id="menu-relay-status"></div>
+  </div>
+  <!-- Volume -->
+  <div style="margin-top:8px;text-align:center">
+    <div style="color:#888;font-size:11px;margin-bottom:3px">VOLUME</div>
+    <input type="range" id="volume-slider" min="0" max="100" value="50" style="width:160px;accent-color:#0ff;cursor:pointer"
+      oninput="SoundManager.setVolume(this.value/100);document.getElementById('volume-val').textContent=Math.round(this.value)+'%'">
+    <span id="volume-val" style="color:#0ff;font-size:11px;margin-left:6px">50%</span>
+  </div>
+  <div id="controls-info">
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move &bull;
+    <kbd>Space</kbd> Dash &bull;
+    <kbd>Q</kbd> Parry Shield<br>
+    <kbd>LMB</kbd> Shoot/Place &bull;
+    <kbd>RMB</kbd> Melee<br>
+    <kbd>1</kbd> Conveyor
+    <kbd>2</kbd> Wall
+    <kbd>3</kbd> Turret
+    <kbd>4</kbd> Spawner &bull;
+    <kbd>Esc</kbd> Cancel &bull;
+    <kbd>P</kbd> Pause Bot<br>
+    <kbd>8</kbd> Strike Upg &bull; <kbd>9</kbd> Bullet Upg &bull; <kbd>0</kbd> Fortify Upg
+  </div>
+</div>
+<div id="waiting-screen">
+  <h2>WAITING FOR OPPONENT</h2>
+  <div class="hint">Share this Room Code:</div>
+  <div class="room-display" id="waiting-room-id">---</div>
+  <button class="copy-btn" onclick="copyRoomId()">Copy Room Code</button>
+  <div class="hint" style="margin-top:20px">Share this Room Code with your friend.<br>They click "Join Room" and paste the code.</div>
+  <div class="relay-status" id="relay-status">Relay: connecting...</div>
+  <button class="cancel-btn" onclick="cancelWaiting()">Cancel</button>
+</div>
+<div id="tutorial-overlay">
+  <h2>HOW TO PLAY</h2>
+  <div class="tutorial-content">
+    <h3>Objective</h3>
+    Destroy enemy <span class="enemy-hl">Core</span> before they destroy yours. Cores are only vulnerable when the defending player is dead (respawning)!
+
+    <h3>Energy System</h3>
+    <span class="energy-hl">Energy</span> is your main resource. Start with 50, max 350. There are <span class="energy-hl">Energy Nodes</span> on the map. Build <span class="highlight">Conveyors</span> from your Core to nodes to capture them. Each captured node = +3.5 energy/sec. No nodes = only +0.8/sec.
+
+    <h3>Node Capture Rules</h3>
+    Each player has <span class="highlight">2 nodes on their half</span> with <b>owner priority</b> — the field owner always captures them first. The <span class="energy-hl">central node</span> is contested: first player to connect a conveyor to it captures it. If both players connect, the node becomes contested (neutral) until one side is cut off. Opponents can only drain energy from your nodes if they are NOT connected to your conveyor network.
+
+    <h3>Buildings</h3>
+    <b><span class="highlight">Conveyor [1]</span> — 3E</b><br>
+    Energy pipes. Build chains from your Core toward nodes. <span class="energy-hl">Connected</span> conveyors glow bright with arrows. <span class="energy-hl">Disconnected</span> ones show red x. You walk through them freely. Conveyors are invulnerable while you are alive!
+
+    <b><span class="highlight">Wall [2]</span> — 5E</b><br>
+    Barrier (120 HP). Blocks enemy bullets and movement. You can walk through YOUR OWN walls!
+
+    <b><span class="highlight">Turret [3]</span> — 16E (5s cooldown)</b><br>
+    Auto-fires at enemies (320px range). Each shot costs 1E from your pool. 70 HP.
+
+    <b><span class="highlight">Spawner [4]</span> — 20E (8s cooldown)</b><br>
+    Spawns NPC mobs every 8s (max 3 per spawner). Mobs march toward the enemy core. 90 HP.
+
+    <h3>Core Vulnerability</h3>
+    A <span class="enemy-hl">Core</span> can only take damage when its defending player is dead and respawning (3.5s). This creates strategic windows — eliminate the enemy, then rush their core!
+
+    <h3>Combat</h3>
+    <b>Shoot [LMB]</b> — 4E per bolt.<br>
+    <b>Melee [RMB]</b> — 28 dmg, destroys buildings! 0.75s CD.<br>
+    <b>Dash [Space]</b> — 18 impact dmg. Invincible briefly. 1.4s CD.<br>
+    <b>Parry [Q hold]</b> — Reflects bullets at 1.5x dmg.
+
+    <h3>Power-Ups</h3>
+    Random power-ups spawn in the center of the map every 20-30 seconds! Walk over them to collect:<br>
+    <b><span class="highlight">Speed Boost</span></b> — 1.4x movement speed for 8 seconds<br>
+    <b><span class="highlight">Shield</span></b> — Absorbs 40 damage (one-time)<br>
+    <b><span class="highlight">Rapid Fire</span></b> — 2x fire rate for 6 seconds<br>
+    Beware of the <span class="enemy-hl">Lava Zone</span> in the center — it deals 15 damage/sec! The lava shifts position every 30 seconds.
+
+    <h3>Upgrades</h3>
+    <b><span class="highlight">Strike [E]</span> — 50/100/160E</b><br>
+    Improves melee range and damage. Level 3 adds AoE cleave (hits multiple targets in a wide arc).<br><br>
+    <b><span class="highlight">Bullet [R]</span> — 60/130/220E</b><br>
+    Increases bullet speed and damage. Level 3 makes bullets nearly instant — no need to lead targets!<br><br>
+    <b><span class="highlight">Fortify [F]</span> — 60/110/170E</b><br>
+    Increases max HP (+25/50/80) and reduces all incoming damage by 5%/10%/15%.
+
+    <h3>Tips</h3>
+    Capture nodes early for economy! Conveyors are protected while you live. Eliminate the enemy player to expose their core!
+  </div>
+  <button class="close-tutorial" onclick="hideTutorial()">Got It!</button>
+</div>
+
+<script>
+'use strict';
+/*******************************
+  CONVEYOR CLASH v13.5
+  - v12 fixes preserved (visibility, networking, reconnect)
+  - Conveyor cooldown (2s)
+  - Upgrade system: Strike[E], Bullet[R], Fortify[F]
+  - Power-ups from v7.2 (Speed, Shield, Rapid Fire)
+  - Lava zone from v7.2 (center, shifts position)
+  - Enhanced core visuals (tendrils, rotating rings)
+  - Enhanced node visuals (pulsing hex border glow)
+  - Color selection via dropdown, relay server dropdown
+*******************************/
+
+const CELL=40, COLS=40, ROWS=22;
+const W=COLS*CELL, H=ROWS*CELL+20;
+const MECH_R=16, MECH_ACCEL=1600, MECH_FRICTION=0.88, MECH_MAX_SPEED=260, MECH_HP=120;
+const DASH_SPEED=650, DASH_DUR=0.2, DASH_CD=1.4, DASH_DMG=18;
+const BULLET_SPEED=480, BULLET_DMG=10, BULLET_COST=4, BULLET_LIFE=2.2, SHOOT_CD=0.2;
+const MELEE_DMG_MECH=28, MELEE_RANGE=52, MELEE_HALF_W=18, MELEE_KB=520, MELEE_DUR=0.28, MELEE_CD=0.75;
+const SHIELD_MAX_HP=7, SHIELD_BREAK_CD=3.0;
+const PARRY_ARC=Math.PI*0.6, PARRY_DIST=32;
+const CONV_COST=3, WALL_COST=5, TURR_COST=16, CONV_HP=40;
+const WALL_HP=120, TURR_HP=70, TURR_RANGE=320, TURR_DMG=9, TURR_FIRE_RATE=0.7, TURR_ENERGY_COST=1;
+const START_ENERGY=50, NODE_RATE=3.5, BASE_ENERGY_RATE=0.8, MAX_ENERGY=350;
+const CORE_SIZE=80, CORE_HP=600;
+const RESPAWN_TIME=3.5;
+const SPAWNER_COST=20, SPAWNER_HP=90, SPAWNER_INTERVAL=8;
+const MOB_HP=30, MOB_SPEED=80, MOB_DMG_PLAYER=5, MOB_DMG_BUILDING=8, MOB_ATTACK_CD=1.0, MOB_R=8;
+const MAX_MOBS_PER_SPAWNER=3;
+const TURRET_PLACE_CD=5, SPAWNER_PLACE_CD=8;
+const CONV_PLACE_CD=2;
+// Upgrades
+const UPG_STRIKE_COSTS=[50,100,160];
+const UPG_BULLET_COSTS=[60,130,220];
+const UPG_FORT_COSTS=[60,110,170];
+const MAX_UPG_LEVEL=3;
+// Power-ups
+const PU_SPEED=1,PU_SHIELD=2,PU_RAPID=3;
+const PU_SPAWN_MIN=20,PU_SPAWN_MAX=30;
+const PU_SPEED_MULT=1.4,PU_SPEED_DUR=8;
+const PU_SHIELD_HP=40;
+const PU_RAPID_MULT=0.5,PU_RAPID_DUR=6;
+// Lava
+const LAVA_DMG_PER_SEC=15;
+const LAVA_COLS_MIN=18,LAVA_COLS_MAX=21;
+
+/*** COLORS ***/
+const P1C='#0ff', P1_CONN='#0cc', P1_CONN_BDR='#0ee', P1_DISC='#184848', P1_DISC_BDR='#0a8888';
+const P1_WALL='#206060', P1_WALL_BDR='#0ee', P1_TURR='#185050', P1_TURR_BDR='#0ff', P1_BG='#0a7a7a';
+const P2C='#f60', P2_CONN='#d80', P2_CONN_BDR='#fa0', P2_DISC='#482010', P2_DISC_BDR='#885520';
+const P2_WALL='#602010', P2_WALL_BDR='#e80', P2_TURR='#501808', P2_TURR_BDR='#f60', P2_BG='#8a3a10';
+const P1_SPAWNER='#0a5a5a', P1_SPAWNER_BDR='#0ee', P1_MOB='#0ff';
+const P2_SPAWNER='#5a2a10', P2_SPAWNER_BDR='#fa0', P2_MOB='#f60';
+
+function pcc(p,conn){return p===0?(conn?P1_CONN:P1_DISC):(conn?P2_CONN:P2_DISC)}
+function pcb(p,conn){return p===0?(conn?P1_CONN_BDR:P1_DISC_BDR):(conn?P2_CONN_BDR:P2_DISC_BDR)}
+function pwc(p){return p===0?P1_WALL:P2_WALL}
+function pwb(p){return p===0?P1_WALL_BDR:P2_WALL_BDR}
+function ptc(p){return p===0?P1_TURR:P2_TURR}
+function ptb(p){return p===0?P1_TURR_BDR:P2_TURR_BDR}
+function pcol(p){return p===0?P1C:P2C}
+function pbg(p){return p===0?P1_BG:P2_BG}
+function psc(p){return p===0?P1_SPAWNER:P2_SPAWNER}
+function psb(p){return p===0?P1_SPAWNER_BDR:P2_SPAWNER_BDR}
+function pmc(p){return p===0?P1_MOB:P2_MOB}
+
+/*** NODE POSITIONS — centered center node (gx=20), 2 per half + 1 center ***/
+// P1 half: gx 0-19, P2 half: gx 20-39
+// 2 nodes per half + 2 center contested nodes (perfect symmetry)
+const NODE_POS=[
+  {gx:8,gy:4,ownerPriority:0},   // P1 half top
+  {gx:8,gy:17,ownerPriority:0},  // P1 half bottom
+  {gx:19,gy:11,ownerPriority:-1},// CENTER left
+  {gx:20,gy:11,ownerPriority:-1},// CENTER right
+  {gx:31,gy:4,ownerPriority:1},  // P2 half top
+  {gx:31,gy:17,ownerPriority:1}  // P2 half bottom
+];
+
+const CORE_CTR=[{x:120,y:440},{x:1480,y:440}];
+const SPAWN=[{x:220,y:440},{x:1380,y:440}];
+
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+canvas.width=W;canvas.height=H;
+
+let ws=null,isHost=false,myIndex=0;
+let gameState=null,lastTime=0;
+const TICK=1/30;
+let animTime=0,practiceMode=false,aiPaused=false,aiTimer=0;
+const keys={};
+let mouseX=W/2,mouseY=H/2,mouseLeftDown=false,mouseRightDown=false;
+let mouseLeftClicked=false,mouseRightClicked=false,buildMode=0;
+let remoteInput=null,lastInputSent=0;
+let buildFlashes=[];
+let upgradeEClicked=false,upgradeRClicked=false,upgradeFClicked=false;
+let lavaBubbles=[];
+let connected=false,roomId=null;
+let relayUrl='',httpBase='',relayPathPrefix='';
+let pingMs=0,lastPingTime=0,pingTimer=null;
+let reconnectTimer=null;
+
+// Player customization
+let playerColor=localStorage.getItem('cc_color')||'cyan';
+let playerShape=localStorage.getItem('cc_shape')||'arrow';
+const PLAYER_COLORS=['cyan','orange','green','red','purple','yellow','pink','white'];
+const PLAYER_SHAPES=['arrow','diamond','triangle','square','circle','star'];
+const COLOR_MAP={cyan:'#0ff',orange:'#f60',green:'#0f0',red:'#f44',purple:'#a0f',yellow:'#ff0',pink:'#f8f',white:'#fff'};
+const COLOR_BG_MAP={cyan:'#0a5a5a',orange:'#5a2a10',green:'#0a4a0a',red:'#4a1010',purple:'#3a105a',yellow:'#4a4a0a',pink:'#4a2040',white:'#555'};
+let remotePlayerShape='arrow';
+let remotePlayerColor='cyan';
+
+// Transport
+let transport=null;
+let pollSessionId=null,pollRunning=false;
+
+const REPLIT_RELAY_URL='https://server-launch--qwertypom1234.replit.app';
+const AMVERA_RELAY_URL='https://test-anton21532.amvera.io';
+const DEFAULT_RELAY_URL=REPLIT_RELAY_URL;
+
+// ===== SOUND MANAGER (from v7.2 — Web Audio API) =====
+const SoundManager={
+  ctx:null,
+  volume:0.5,
+  enabled:true,
+  init(){
+    try{this.ctx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){this.enabled=false}
+    const saved=localStorage.getItem('cc_volume');
+    if(saved!==null)this.volume=parseFloat(saved);
+  },
+  resume(){
+    if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();
+  },
+  setVolume(v){
+    this.volume=clamp(v,0,1);
+    localStorage.setItem('cc_volume',this.volume);
+  },
+  play(name){
+    if(!this.enabled||!this.ctx||this.volume<=0)return;
+    this.resume();
+    const now=this.ctx.currentTime;
+    const g=this.ctx.createGain();
+    g.connect(this.ctx.destination);
+    g.gain.value=this.volume;
+    switch(name){
+      case'shoot':{const o=this.ctx.createOscillator();o.type='square';o.frequency.setValueAtTime(800,now);g.gain.setValueAtTime(0.15,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.05);o.connect(g);o.start(now);o.stop(now+0.05);break}
+      case'melee':{const buf=this.ctx.createBuffer(1,this.ctx.sampleRate*0.15,this.ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);const s=this.ctx.createBufferSource();s.buffer=buf;g.gain.setValueAtTime(0.2,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.15);s.connect(g);s.start(now);break}
+      case'dash':{const o=this.ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(400,now);o.frequency.exponentialRampToValueAtTime(200,now+0.12);g.gain.setValueAtTime(0.15,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.12);o.connect(g);o.start(now);o.stop(now+0.12);break}
+      case'hit':{const o=this.ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(120,now);g.gain.setValueAtTime(0.2,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.08);o.connect(g);o.start(now);o.stop(now+0.08);break}
+      case'death':{const buf=this.ctx.createBuffer(1,this.ctx.sampleRate*0.4,this.ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5);const s=this.ctx.createBufferSource();s.buffer=buf;const g2=this.ctx.createGain();g2.connect(this.ctx.destination);g2.gain.value=this.volume*0.25;const o=this.ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(80,now);g.gain.setValueAtTime(0.2,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.4);s.connect(g);o.connect(g2);s.start(now);o.start(now);s.stop(now+0.4);o.stop(now+0.4);break}
+      case'building':{const o=this.ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(1200,now);o.frequency.setValueAtTime(600,now+0.03);g.gain.setValueAtTime(0.12,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.06);o.connect(g);o.start(now);o.stop(now+0.06);break}
+      case'coreHit':{const o=this.ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(80,now);g.gain.setValueAtTime(0.25,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.25);o.connect(g);o.start(now);o.stop(now+0.25);break}
+      case'nodeCapture':{const o=this.ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(300,now);o.frequency.exponentialRampToValueAtTime(600,now+0.15);g.gain.setValueAtTime(0.15,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.15);o.connect(g);o.start(now);o.stop(now+0.15);break}
+      case'victory':{const freqs=[523.25,659.25,783.99];for(let fi=0;fi<freqs.length;fi++){const o=this.ctx.createOscillator();const vg=this.ctx.createGain();vg.connect(this.ctx.destination);vg.gain.value=this.volume*0.12;o.type='sine';o.frequency.setValueAtTime(freqs[fi],now);o.connect(vg);o.start(now);o.stop(now+0.5)}break}
+      case'defeat':{const o=this.ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(400,now);o.frequency.exponentialRampToValueAtTime(150,now+0.5);g.gain.setValueAtTime(0.15,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.5);o.connect(g);o.start(now);o.stop(now+0.5);break}
+      case'parry':{const buf=this.ctx.createBuffer(1,this.ctx.sampleRate*0.08,this.ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);const s=this.ctx.createBufferSource();s.buffer=buf;g.gain.setValueAtTime(0.2,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.08);s.connect(g);s.start(now);break}
+    }
+  }
+};
+SoundManager.init();
+
+// ===== BACKGROUND KEEP-ALIVE (prevents tab throttling when host is on another tab) =====
+// Two-layer strategy:
+//   1) Silent Web Audio oscillator — Chrome/Firefox/Edge won't throttle a tab that's making sound.
+//   2) Web Worker heartbeat — workers are NOT throttled in background; the heartbeat keeps
+//      posting 'tick' messages so the main thread gets scheduled even when the tab is hidden.
+const BackgroundKeepAlive={
+  audioCtx:null,oscillator:null,gainNode:null,
+  worker:null,workerUrl:null,
+  active:false,
+  start(){
+    if(this.active)return;
+    // Layer 1: silent oscillator
+    try{
+      const Ctx=window.AudioContext||window.webkitAudioContext;
+      if(Ctx){
+        this.audioCtx=new Ctx();
+        if(this.audioCtx.state==='suspended'){this.audioCtx.resume().catch(()=>{})}
+        this.oscillator=this.audioCtx.createOscillator();
+        this.gainNode=this.audioCtx.createGain();
+        this.gainNode.gain.value=0.0001; // essentially silent
+        this.oscillator.connect(this.gainNode);
+        this.gainNode.connect(this.audioCtx.destination);
+        this.oscillator.start();
+      }
+    }catch(e){console.warn('[keepalive] audio failed:',e)}
+    // Layer 2: worker heartbeat
+    try{
+      const workerCode='setInterval(()=>postMessage("tick"),'+Math.round(TICK*1000)+');';
+      const blob=new Blob([workerCode],{type:'application/javascript'});
+      this.workerUrl=URL.createObjectURL(blob);
+      this.worker=new Worker(this.workerUrl);
+      this.worker.onmessage=(e)=>{
+        if(e.data!=='tick')return;
+        onWorkerTick();
+      };
+      this.worker.onerror=(e)=>{console.warn('[keepalive] worker error:',e.message||e)};
+    }catch(e){console.warn('[keepalive] worker failed:',e)}
+    // Only mark as active if the worker actually started — otherwise the
+    // fallback setInterval (in startGameTicks) must keep driving ticks.
+    this.active=(this.worker!==null);
+    console.log('[keepalive] '+(this.active?'started (host background execution enabled)':'worker unavailable — using setInterval fallback'));
+  },
+  stop(){
+    if(this.oscillator){try{this.oscillator.stop()}catch(e){}this.oscillator=null}
+    if(this.audioCtx){try{this.audioCtx.close()}catch(e){}this.audioCtx=null}
+    if(this.worker){try{this.worker.terminate()}catch(e){}this.worker=null}
+    if(this.workerUrl){try{URL.revokeObjectURL(this.workerUrl)}catch(e){}this.workerUrl=null}
+    this.gainNode=null;
+    this.active=false;
+    console.log('[keepalive] stopped');
+  }
+};
+
+// ===== VISUAL EFFECTS =====
+let floatingTexts=[];
+function addFloatingText(x,y,text,color){if(floatingTexts.length>80)return;floatingTexts.push({x:x+rng(-15,15),y,text,color,timer:1,maxTimer:1})}
+function updateFloatingTexts(dt){for(let i=floatingTexts.length-1;i>=0;i--){floatingTexts[i].timer-=dt;floatingTexts[i].y-=50*dt;if(floatingTexts[i].timer<=0)floatingTexts.splice(i,1)}}
+function drawFloatingTexts(){for(const ft of floatingTexts){const a=clamp(ft.timer/ft.maxTimer,0,1);ctx.globalAlpha=a;ctx.fillStyle=ft.color;ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ft.text,ft.x,ft.y)}ctx.globalAlpha=1}
+
+let screenShakeX=0,screenShakeY=0,screenShakeIntensity=0,screenShakeTimer=0;
+function triggerScreenShake(intensity,duration){screenShakeIntensity=Math.max(screenShakeIntensity,intensity);screenShakeTimer=Math.max(screenShakeTimer,duration)}
+function updateScreenShake(dt){if(screenShakeTimer>0){screenShakeTimer-=dt;const decay=screenShakeTimer>0?1:0;screenShakeX=(Math.random()-0.5)*2*screenShakeIntensity*decay;screenShakeY=(Math.random()-0.5)*2*screenShakeIntensity*decay;if(screenShakeTimer<=0){screenShakeX=0;screenShakeY=0;screenShakeIntensity=0}}}
+
+let killFeed=[];
+function addKillFeed(msg,color){killFeed.push({msg,color,timer:5,maxTimer:5});if(killFeed.length>6)killFeed.shift()}
+function updateKillFeed(dt){for(let i=killFeed.length-1;i>=0;i--){killFeed[i].timer-=dt;if(killFeed[i].timer<=0)killFeed.splice(i,1)}}
+function drawKillFeed(){const x=W-10;let y=90;for(const kf of killFeed){const a=clamp(kf.timer/kf.maxTimer,0,1);ctx.globalAlpha=a;ctx.fillStyle=kf.color;ctx.font='11px monospace';ctx.textAlign='right';ctx.fillText(kf.msg,x,y);y+=16}ctx.globalAlpha=1}
+
+// ===== UTILITY =====
+function clamp(v,l,h){return v<l?l:v>h?h:v}
+function rng(a,b){return a+Math.random()*(b-a)}
+function rngInt(a,b){return Math.floor(rng(a,b+1))}
+function normAngle(a){while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a}
+function gridCtr(GX,GY){return{x:GX*CELL+CELL/2,y:GY*CELL+CELL/2}}
+function toGrid(px,py){return{gx:Math.floor(px/CELL),gy:Math.floor(py/CELL)}}
+function rectCircle(rx,ry,rw,rh,cx,cy,cr){const nx=clamp(cx,rx,rx+rw),ny=clamp(cy,ry,ry+rh);return Math.hypot(cx-nx,cy-ny)<cr}
+function circleCircle(x1,y1,r1,x2,y2,r2){return Math.hypot(x1-x2,y1-y2)<r1+r2}
+function pointInArc(px,py,cx,cy,facing,arcHalf,dist){const dx=px-cx,dy=py-cy,d=Math.hypot(dx,dy);if(d>dist)return false;const ang=Math.atan2(dy,dx);return Math.abs(normAngle(ang-facing))<arcHalf}
+
+function createGameState(){return{phase:'countdown',countdown:3.5,time:0,winner:-1,mechs:[makeMech(0),makeMech(1)],cores:[{x:CORE_CTR[0].x,y:CORE_CTR[0].y,hp:CORE_HP,maxHp:CORE_HP},{x:CORE_CTR[1].x,y:CORE_CTR[1].y,hp:CORE_HP,maxHp:CORE_HP}],energy:[START_ENERGY,START_ENERGY],connectedNodes:[0,0],buildings:[],bullets:[],tBullets:[],nodes:NODE_POS.map(n=>({gx:n.gx,gy:n.gy,owner:-1,ownerPriority:n.ownerPriority})),mobs:[],turretPlaceCd:[0,0],spawnerPlaceCd:[0,0],convPlaceCd:[0,0],particles:[],meleeHitP1:false,meleeHitP2:false,botsEliminated:[false,false],upgStrike:[0,0],upgBullet:[0,0],upgFort:[0,0],powerUps:[],puSpawnTimer:rng(PU_SPAWN_MIN,PU_SPAWN_MAX),puSpeedTimer:[0,0],puShieldHp:[0,0],puRapidTimer:[0,0],lavaY:Math.floor(ROWS/2)-3,lavaTimer:30}}
+function makeMech(p){return{x:SPAWN[p].x,y:SPAWN[p].y,vx:0,vy:0,hp:MECH_HP,maxHp:MECH_HP,facing:p===0?0:Math.PI,dashing:false,dashTimer:0,dashCd:0,dashDx:0,dashDy:0,parrying:false,meleeing:false,meleeTimer:0,meleeCd:0,shootCd:0,invTimer:0,respawnTimer:0,dead:false,lastDamagedBy:-1,shieldHp:SHIELD_MAX_HP,shieldCd:0,shieldBroken:false}}
+
+/*** ENERGY NETWORK — IMPROVED NODE CAPTURE ***/
+function computeEnergy(gs){
+  const cn=[0,0];
+  for(let p=0;p<2;p++){
+    const visited=new Set(),queue=[];
+    const cc=toGrid(gs.cores[p].x,gs.cores[p].y);
+    // BFS from core (core occupies ~3x3 cells)
+    for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+      const k=(cc.gx+dx)+','+(cc.gy+dy);
+      if(!visited.has(k)){visited.add(k);queue.push({gx:cc.gx+dx,gy:cc.gy+dy})}
+    }
+    const myConv=gs.buildings.filter(b=>b.owner===p&&b.type===1);
+    let head=0;
+    while(head<queue.length){
+      const{gx,gy}=queue[head++];
+      for(const b of myConv){
+        const k=b.gx+','+b.gy;
+        if(!visited.has(k)&&Math.abs(b.gx-gx)+Math.abs(b.gy-gy)<=1){
+          visited.add(k);queue.push({gx:b.gx,gy:b.gy})
+        }
+      }
+    }
+    for(const b of gs.buildings){if(b.owner===p&&b.type===1)b.connected=visited.has(b.gx+','+b.gy)}
+    // Node capture logic
+    for(const n of gs.nodes){
+      let playerAdj=false,enemyAdj=false;
+      for(const b of gs.buildings){
+        if(b.type!==1||!b.connected)continue;
+        if(Math.abs(b.gx-n.gx)+Math.abs(b.gy-n.gy)<=1){
+          if(b.owner===p)playerAdj=true;else enemyAdj=true;
+        }
+      }
+      // Core proximity
+      if(Math.abs(n.gx-cc.gx)+Math.abs(n.gy-cc.gy)<=2)playerAdj=true;
+      const oc=toGrid(gs.cores[1-p].x,gs.cores[1-p].y);
+      if(Math.abs(n.gx-oc.gx)+Math.abs(n.gy-oc.gy)<=2)enemyAdj=true;
+
+      // OWNER PRIORITY LOGIC:
+      // If node has ownerPriority (0 or 1), that player always wins on their half
+      // if they have adjacency. Opponent can only capture if owner has NO adjacency.
+      const prio=n.ownerPriority!==undefined?n.ownerPriority:-1;
+
+      if(prio===p){
+        // This is this player's priority node — they always capture if adjacent
+        if(playerAdj){n.owner=p;cn[p]++}
+        else if(enemyAdj&&!playerAdj){n.owner=1-p;cn[1-p]++}
+        // else keep current
+      }else if(prio===1-p){
+        // Opponent's priority node — skip (handled when p=1-p)
+      }else{
+        // CENTER NODE — first to connect captures, contested if both connect
+        if(playerAdj&&!enemyAdj){n.owner=p;cn[p]++}
+        else if(!playerAdj&&enemyAdj){n.owner=1-p;cn[1-p]++}
+        else if(playerAdj&&enemyAdj){n.owner=-1} // contested
+      }
+    }
+  }
+  gs.connectedNodes=cn;
+}
+
+/*** INPUT — fixed for guest and input fields ***/
+function isInputFocused(){const ae=document.activeElement;return ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.tagName==='SELECT')}
+document.addEventListener('keydown',e=>{
+  if(isInputFocused())return;
+  const c=e.code,k=e.key;
+  if(c==='Space'){e.preventDefault();keys.space=true}
+  else if(c==='KeyW'){e.preventDefault();keys.w=true}
+  else if(c==='KeyA'){e.preventDefault();keys.a=true}
+  else if(c==='KeyS'){e.preventDefault();keys.s=true}
+  else if(c==='KeyD'){e.preventDefault();keys.d=true}
+  else if(c==='KeyQ')keys.q=true;
+  else if(c==='KeyP'){
+    if(practiceMode){aiPaused=!aiPaused;buildFlashes.push({x:W/2,y:H/2,timer:2.5,maxTimer:2.5,msg:aiPaused?'BOT PAUSED':'BOT RESUMED'})}
+  }else{const lk=k.toLowerCase();keys[lk]=true}
+  if(k==='1'){buildMode=buildMode===1?0:1;e.preventDefault()}
+  if(k==='2'){buildMode=buildMode===2?0:2;e.preventDefault()}
+  if(k==='3'){buildMode=buildMode===3?0:3;e.preventDefault()}
+  if(k==='4'){buildMode=buildMode===4?0:4;e.preventDefault()}
+  if(k==='8'||c==='Digit8'){upgradeEClicked=true;e.preventDefault();return}
+  if(k==='9'||c==='Digit9'){upgradeRClicked=true;e.preventDefault();return}
+  if(k==='0'||c==='Digit0'){upgradeFClicked=true;e.preventDefault();return}
+  if(k==='Escape')buildMode=0;
+});
+document.addEventListener('keyup',e=>{
+  if(isInputFocused())return;
+  const c=e.code,k=e.key;
+  if(c==='Space')keys.space=false;
+  else if(c==='KeyW')keys.w=false;
+  else if(c==='KeyA')keys.a=false;
+  else if(c==='KeyS')keys.s=false;
+  else if(c==='KeyD')keys.d=false;
+  else if(c==='KeyQ')keys.q=false;
+  else{const lk=k.toLowerCase();keys[lk]=false}
+});
+
+// FIX: Reset all keys when tab loses focus (prevents stuck keys)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Reset ALL keys when tab becomes hidden
+    Object.keys(keys).forEach(k => keys[k] = false);
+    mouseLeftDown = false;
+    mouseRightDown = false;
+    mouseLeftClicked = false;
+    mouseRightClicked = false;
+  } else {
+    // When tab becomes visible again, focus canvas
+    setTimeout(() => { canvas.focus(); SoundManager.resume(); }, 100);
+  }
+});
+
+// Also reset on window blur (Alt+Tab, etc)
+window.addEventListener('blur', () => {
+  Object.keys(keys).forEach(k => keys[k] = false);
+  mouseLeftDown = false;
+  mouseRightDown = false;
+  mouseLeftClicked = false;
+  mouseRightClicked = false;
+});
+
+// Auto-focus canvas when clicking anywhere on page during game
+document.addEventListener('click', (e) => {
+  if (gameState && gameState.phase !== 'menu' && gameState.phase !== 'gameover') {
+    canvas.focus();
+    SoundManager.resume();
+  }
+});
+
+canvas.tabIndex=0;
+canvas.addEventListener('click',e=>{
+  canvas.focus();
+  SoundManager.resume();
+  if(gameState&&gameState.phase==='gameover'){
+    const r=canvas.getBoundingClientRect();
+    const cx=(e.clientX-r.left)*(W/r.width);
+    const cy=(e.clientY-r.top)*(H/r.height);
+    const bx=W/2-120,by=H/2+55,bw=240,bh=44;
+    if(cx>=bx&&cx<=bx+bw&&cy>=by&&cy<=by+bh){backToMenu();return}
+  }
+});
+canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mouseX=(e.clientX-r.left)*(W/r.width);mouseY=(e.clientY-r.top)*(H/r.height)});
+canvas.addEventListener('mousedown',e=>{e.preventDefault();SoundManager.resume();if(e.button===0){mouseLeftDown=true;mouseLeftClicked=true}if(e.button===2){mouseRightDown=true;mouseRightClicked=true}});
+canvas.addEventListener('mouseup',e=>{if(e.button===0)mouseLeftDown=false;if(e.button===2)mouseRightDown=false});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+function captureInput(){const inp={w:!!keys.w,a:!!keys.a,s:!!keys.s,d:!!keys.d,space:!!keys.space,q:!!keys.q,mx:mouseX,my:mouseY,lmb:mouseLeftClicked,rmb:mouseRightClicked,buildMode,upgE:upgradeEClicked,upgR:upgradeRClicked,upgF:upgradeFClicked};mouseLeftClicked=false;mouseRightClicked=false;upgradeEClicked=false;upgradeRClicked=false;upgradeFClicked=false;return inp}
+
+function applyDmgToMech(gs,p,rawDmg){const fortLv=gs.upgFort?gs.upgFort[p]:0;const red=fortLv*0.05;return Math.max(1,Math.round(rawDmg*(1-red)))}
+
+function drawCoreTendrils(co,p,gs){const col=pcol(p);const numT=6;const hpPct=gs.cores[p].hp/gs.cores[p].maxHp;for(let t=0;t<numT;t++){const baseA=Math.PI*2/numT*t+animTime*0.5;const len=16+12*Math.sin(animTime*3+t*1.5)+8*hpPct;ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=0.3+0.1*Math.sin(animTime*4+t);ctx.beginPath();ctx.moveTo(co.x,co.y);let px=co.x,py=co.y;for(let s=1;s<=5;s++){const frac=s/5;const wobble=Math.sin(animTime*5+t*2+s*0.8)*6*frac;const nx=co.x+Math.cos(baseA)*len*frac+Math.cos(baseA+Math.PI/2)*wobble;const ny=co.y+Math.sin(baseA)*len*frac+Math.sin(baseA+Math.PI/2)*wobble;ctx.lineTo(nx,ny);px=nx;py=ny}ctx.stroke();ctx.globalAlpha=0.5+0.2*Math.sin(animTime*6+t*3);ctx.fillStyle=col;ctx.beginPath();ctx.arc(px,py,2,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1}
+
+/*** AI ***/
+function getAIInput(gs,p){
+  const m=gs.mechs[p],em=gs.mechs[1-p],eco=gs.cores[1-p];
+  const inp={w:false,a:false,s:false,d:false,space:false,q:false,mx:eco.x,my:eco.y,lmb:false,rmb:false,buildMode:0,upgE:false,upgR:false,upgF:false};
+  if(m.dead)return inp;
+  // PRIORITY: If enemy player is dead, attack their core!
+  if(em.dead){
+    inp.mx=eco.x+rng(-20,20);inp.my=eco.y+rng(-20,20);
+    const dCore=Math.hypot(m.x-eco.x,m.y-eco.y);
+    const aCore=Math.atan2(eco.y-m.y,eco.x-m.x);
+    // Move toward core
+    if(dCore>80){if(Math.cos(aCore)>0.1)inp.d=true;if(Math.cos(aCore)<-0.1)inp.a=true;if(Math.sin(aCore)>0.1)inp.s=true;if(Math.sin(aCore)<-0.1)inp.w=true}
+    // Melee core when in range
+    if(dCore<CORE_SIZE/2+MELEE_RANGE&&m.meleeCd<=0)inp.rmb=true;
+    // Shoot core always
+    if(dCore<500&&m.shootCd<=0)inp.lmb=true;
+    // Dash toward core
+    if(dCore>60&&dCore<300&&m.dashCd<=0&&Math.random()<0.06)inp.space=true;
+    // Building: still try to build when near core
+    aiTimer-=TICK;
+    if(aiTimer<=0){aiTimer=rng(0.5,1.5);const un=gs.nodes.filter(n=>n.owner!==p);if(un.length>0){const nd=un[rngInt(0,un.length-1)],cc=toGrid(gs.cores[p].x,gs.cores[p].y);let cx=cc.gx,cy=cc.gy;const S=rngInt(2,5);for(let s=0;s<S;s++){const dx=Math.sign(nd.gx-cx),dy=Math.sign(nd.gy-cy);if(Math.abs(nd.gx-cx)>Math.abs(nd.gy-cy))cx+=dx;else cy+=dy;if(canPlaceBuild(gs,p,cx,cy,1)){placeBuild(gs,p,cx,cy,1);SoundManager.play('building')}else break}}}
+    const e2=gs.energy[p];
+    if(gs.upgStrike[p]<MAX_UPG_LEVEL&&e2>UPG_STRIKE_COSTS[gs.upgStrike[p]]+30&&Math.random()<0.02)inp.upgE=true;
+    if(gs.upgBullet[p]<MAX_UPG_LEVEL&&e2>UPG_BULLET_COSTS[gs.upgBullet[p]]+30&&Math.random()<0.02)inp.upgR=true;
+    if(gs.upgFort[p]<MAX_UPG_LEVEL&&e2>UPG_FORT_COSTS[gs.upgFort[p]]+30&&Math.random()<0.015)inp.upgF=true;
+    return inp;
+  }
+  inp.mx=em.x+rng(-30,30);inp.my=em.y+rng(-30,30);
+  const dEn=Math.hypot(m.x-em.x,m.y-em.y),aE=Math.atan2(em.y-m.y,em.x-m.x);
+  // Movement: approach if far, strafe if medium, dodge if close
+  if(dEn>220){if(Math.cos(aE)>0.2)inp.d=true;if(Math.cos(aE)<-0.2)inp.a=true;if(Math.sin(aE)>0.2)inp.s=true;if(Math.sin(aE)<-0.2)inp.w=true}
+  else if(dEn<80){if(Math.cos(aE)>0.3)inp.a=true;if(Math.cos(aE)<-0.3)inp.d=true;if(Math.random()>0.5)inp.w=true;else inp.s=true}
+  else{inp.w=Math.random()>0.5;inp.s=!inp.w;if(Math.cos(aE)>0.1)inp.d=true}
+  // Strategic: retreat to core if critically low on HP
+  if(m.hp<m.maxHp*0.25){
+    const corePos=gs.cores[p];
+    const dCore=Math.hypot(m.x-corePos.x,m.y-corePos.y);
+    const aCore=Math.atan2(corePos.y-m.y,corePos.x-m.x);
+    if(dCore>150){if(Math.cos(aCore)>0.1)inp.d=true;if(Math.cos(aCore)<-0.1)inp.a=true;if(Math.sin(aCore)>0.1)inp.s=true;if(Math.sin(aCore)<-0.1)inp.w=true}
+    if(m.dashCd<=0&&dCore>120)inp.space=true;
+  }
+  // Track enemy dash cooldown and avoid shooting during invulnerability
+  const enemyInvul=em.invTimer>0||em.dashing;
+  // Shoot more aggressively (but not when enemy is invulnerable)
+  if(dEn<450&&m.shootCd<=0&&!enemyInvul)inp.lmb=true;
+  // Strategic: if low on energy, stop shooting and capture nodes
+  if(gs.energy[p]<BULLET_COST+5)inp.lmb=false;
+  // Melee when close
+  if(dEn<70&&m.meleeCd<=0)inp.rmb=true;
+  // Use dash more aggressively when enemy is low
+  if(dEn>100&&dEn<300&&m.dashCd<=0&&(Math.random()<0.06||em.hp<em.maxHp*0.4))inp.space=true;
+  if(dEn<60&&m.hp<40&&m.dashCd<=0&&Math.random()<0.06)inp.space=true;
+  // Parry/shield more proactively when near enemy bullets
+  for(const b of gs.bullets){if(b.owner===p)continue;if(Math.hypot(b.x-m.x,b.y-m.y)<180){inp.q=true;break}}
+  for(const b of gs.tBullets){if(b.owner===p)continue;if(Math.hypot(b.x-m.x,b.y-m.y)<180){inp.q=true;break}}
+  // Building logic: more frequent and strategic
+  aiTimer-=TICK;
+  if(aiTimer<=0){
+    aiTimer=rng(0.5,1.5); // Faster build rate
+    // Prioritize connecting to uncaptured nodes
+    const un=gs.nodes.filter(n=>n.owner!==p);
+    if(un.length>0){
+      const nd=un[rngInt(0,un.length-1)],cc=toGrid(gs.cores[p].x,gs.cores[p].y);
+      let cx=cc.gx,cy=cc.gy;
+      const S=rngInt(2,5); // Build more conveyors at once
+      for(let s=0;s<S;s++){
+        const dx=Math.sign(nd.gx-cx),dy=Math.sign(nd.gy-cy);
+        if(Math.abs(nd.gx-cx)>Math.abs(nd.gy-cy))cx+=dx;else cy+=dy;
+        if(canPlaceBuild(gs,p,cx,cy,1)){placeBuild(gs,p,cx,cy,1);SoundManager.play('building')}else break;
+      }
+    }
+    // Place turrets near conveyors (connected ones) rather than randomly
+    if(gs.energy[p]>TURR_COST+10&&Math.random()<0.4){
+      const myConvs=gs.buildings.filter(b=>b.owner===p&&b.type===1&&b.connected);
+      if(myConvs.length>0){
+        const conv=myConvs[rngInt(0,myConvs.length-1)];
+        for(let tries=0;tries<8;tries++){
+          const gx=conv.gx+rngInt(-2,2),gy=conv.gy+rngInt(-2,2);
+          if(canPlaceBuild(gs,p,gx,gy,3)){placeBuild(gs,p,gx,gy,3);SoundManager.play('building');break}
+        }
+      }
+    }
+    // Prioritize wall placement between core and enemy
+    if(gs.energy[p]>WALL_COST+10&&Math.random()<0.4){
+      const cc=toGrid(gs.cores[p].x,gs.cores[p].y);
+      const ec=toGrid(gs.cores[1-p].x,gs.cores[1-p].y);
+      const midGx=Math.round((cc.gx+ec.gx)/2);
+      const midGy=Math.round((cc.gy+ec.gy)/2);
+      for(let tries=0;tries<12;tries++){
+        const gx=midGx+rngInt(-3,3),gy=midGy+rngInt(-4,4);
+        if(canPlaceBuild(gs,p,gx,gy,2)){placeBuild(gs,p,gx,gy,2);SoundManager.play('building');break}
+      }
+    }
+    // Place spawners behind defensive walls
+    if(gs.energy[p]>SPAWNER_COST+15&&Math.random()<0.25){
+      const cc=toGrid(gs.cores[p].x,gs.cores[p].y);
+      for(let tries=0;tries<12;tries++){
+        const gx=cc.gx+rngInt(-5,5),gy=cc.gy+rngInt(-5,5);
+        if(canPlaceBuild(gs,p,gx,gy,4)){placeBuild(gs,p,gx,gy,4);SoundManager.play('building');break}
+      }
+    }
+    // Replace destroyed buildings more aggressively - build near existing broken spots
+    if(gs.buildings.length<10&&gs.energy[p]>WALL_COST+5&&Math.random()<0.5){
+      const cc=toGrid(gs.cores[p].x,gs.cores[p].y);
+      for(let tries=0;tries<8;tries++){
+        const gx=cc.gx+rngInt(-4,4),gy=cc.gy+rngInt(-4,4);
+        if(canPlaceBuild(gs,p,gx,gy,2)){placeBuild(gs,p,gx,gy,2);SoundManager.play('building');break}
+      }
+    }
+    // Target enemy disconnected conveyors
+    const enemyDiscConvs=gs.buildings.filter(b=>b.owner===1-p&&b.type===1&&!b.connected);
+    if(enemyDiscConvs.length>0&&gs.energy[p]>BULLET_COST){
+      const target=enemyDiscConvs[0];
+      inp.mx=target.gx*CELL+CELL/2;
+      inp.my=target.gy*CELL+CELL/2;
+    }
+  }
+  // AI upgrades - more strategic
+  const e2=gs.energy[p];
+  if(e2>150){// Energy surplus: prioritize upgrades
+    if(gs.upgStrike[p]<MAX_UPG_LEVEL&&e2>UPG_STRIKE_COSTS[gs.upgStrike[p]]+50&&Math.random()<0.05)inp.upgE=true;
+    if(gs.upgBullet[p]<MAX_UPG_LEVEL&&e2>UPG_BULLET_COSTS[gs.upgBullet[p]]+50&&Math.random()<0.05)inp.upgR=true;
+    if(gs.upgFort[p]<MAX_UPG_LEVEL&&e2>UPG_FORT_COSTS[gs.upgFort[p]]+50&&Math.random()<0.04)inp.upgF=true;
+  }else{
+    if(gs.upgStrike[p]<MAX_UPG_LEVEL&&e2>UPG_STRIKE_COSTS[gs.upgStrike[p]]+30&&Math.random()<0.015)inp.upgE=true;
+    if(gs.upgBullet[p]<MAX_UPG_LEVEL&&e2>UPG_BULLET_COSTS[gs.upgBullet[p]]+30&&Math.random()<0.015)inp.upgR=true;
+    if(gs.upgFort[p]<MAX_UPG_LEVEL&&e2>UPG_FORT_COSTS[gs.upgFort[p]]+30&&Math.random()<0.01)inp.upgF=true;
+  }
+  return inp;
+}
+
+/*** NETWORKING — Dual Transport ***/
+function relaySend(msg){
+  if(transport==='ws'&&ws&&ws.readyState===WebSocket.OPEN){
+    try{ws.send(JSON.stringify(msg))}catch(e){}
+  }else if(transport==='poll'&&pollSessionId){
+    fetch(httpBase+relayPathPrefix+'/poll/send',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sessionId:pollSessionId,...msg})
+    }).catch(e=>{})
+  }
+}
+
+function readRelayInput(){const inp=document.getElementById('relay-url-input');if(inp){const v=inp.value.trim();if(v)relayUrl=v}}
+
+function deriveHttpBase(){
+  if(!relayUrl){httpBase='';return}
+  if(relayUrl.startsWith('wss://')){httpBase='https://'+relayUrl.slice(6)}
+  else if(relayUrl.startsWith('ws://')){httpBase='http://'+relayUrl.slice(5)}
+  else if(relayUrl.startsWith('https://')){httpBase=relayUrl;relayUrl='wss://'+relayUrl.slice(8)}
+  else if(relayUrl.startsWith('http://')){httpBase=relayUrl;relayUrl='ws://'+relayUrl.slice(7)}
+  else{httpBase='https://'+relayUrl;relayUrl='wss://'+relayUrl}
+}
+
+function resolveRelayUrls(){
+  const params=new URLSearchParams(location.search);
+  if(params.has('relay')){relayUrl=params.get('relay');relayPathPrefix='';deriveHttpBase();return}
+  const sel=document.getElementById('relay-select');
+  const selVal=sel?sel.value:'replit';
+  if(selVal==='replit'){
+    httpBase=REPLIT_RELAY_URL;
+    relayUrl='wss://server-launch--qwertypom1234.replit.app/relay/ws';
+    relayPathPrefix='/relay';
+    return;
+  }
+  if(selVal==='amvera'){
+    httpBase=AMVERA_RELAY_URL;
+    relayUrl='wss://test-anton21532.amvera.io';
+    relayPathPrefix='';
+    return;
+  }
+  if(selVal==='custom'){readRelayInput();if(relayUrl){relayPathPrefix='';deriveHttpBase();return}}
+  // fallback — use Replit
+  httpBase=REPLIT_RELAY_URL;
+  relayUrl='wss://server-launch--qwertypom1234.replit.app/relay/ws';
+  relayPathPrefix='/relay';
+}
+function onRelaySelectChange(){
+  const sel=document.getElementById('relay-select');
+  const row=document.getElementById('custom-url-row');
+  const ms=document.getElementById('menu-relay-status');
+  if(sel.value==='custom'){row.style.display='block'}else{row.style.display='none'}
+  if(sel.value==='replit'){ms.textContent='Replit relay server';ms.className='relay-status connected'}
+  else if(sel.value==='amvera'){ms.textContent='Amvera relay server';ms.className='relay-status connected'}
+  else{ms.textContent='';ms.className='relay-status'}
+}
+
+async function testRelay(){
+  const inp=document.getElementById('relay-url-input');
+  const ms=document.getElementById('menu-relay-status');
+  const testUrl=inp?inp.value.trim():'';
+  if(!testUrl){ms.textContent='Enter URL first';ms.className='relay-status error';return}
+  let testHttp='';
+  if(testUrl.startsWith('wss://'))testHttp='https://'+testUrl.slice(6);
+  else if(testUrl.startsWith('ws://'))testHttp='http://'+testUrl.slice(5);
+  else if(testUrl.startsWith('https://')||testUrl.startsWith('http://'))testHttp=testUrl;
+  else testHttp='https://'+testUrl;
+  ms.textContent='Testing...';ms.className='relay-status';
+  try{
+    const r=await fetch(testHttp+'/health',{cache:'no-store',signal:AbortSignal.timeout(8000)});
+    const data=await r.json();
+    if(data.status==='ok'){ms.textContent='Connected! Rooms: '+data.rooms+', Uptime: '+data.uptime+'s';ms.className='relay-status connected'}
+    else{ms.textContent='Bad response';ms.className='relay-status error'}
+  }catch(e){ms.textContent='Cannot reach: '+e.message;ms.className='relay-status error'}
+}
+
+async function preWarmRelay(){
+  if(!httpBase)return false;
+  try{const r=await fetch(httpBase+relayPathPrefix+'/health',{cache:'no-store',signal:AbortSignal.timeout(5000)});const data=await r.json();return data.status==='ok'}catch(e){return false}
+}
+
+async function pollOpen(msg){
+  try{
+    const r=await fetch(httpBase+relayPathPrefix+'/poll/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msg)});
+    const data=await r.json();
+    if(data.sessionId){pollSessionId=data.sessionId;transport='poll';pollRunning=true;connected=true;if(data.messages)data.messages.forEach(m=>handleRelayMessage(m));pollLoop();return true}
+  }catch(e){}
+  return false;
+}
+
+function pollLoop(){
+  if(!pollRunning||!pollSessionId||transport!=='poll')return;
+  fetch(httpBase+relayPathPrefix+'/poll/recv?sessionId='+pollSessionId,{cache:'no-store'})
+    .then(r=>r.json()).then(data=>{if(data.messages)data.messages.forEach(m=>handleRelayMessage(m));if(pollRunning)pollLoop()})
+    .catch(e=>{if(pollRunning)setTimeout(pollLoop,500)});
+}
+
+async function pollClose(){pollRunning=false;if(pollSessionId){try{await fetch(httpBase+relayPathPrefix+'/poll/close',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:pollSessionId})})}catch(e){}pollSessionId=null}}
+
+function connectRelay(onOpen){
+  if(ws){try{ws.close()}catch(e){}}
+  pollRunning=false;pollSessionId=null;
+  resolveRelayUrls();
+  const rs=document.getElementById('relay-status');
+  if(rs){rs.textContent='Relay: connecting...';rs.className='relay-status'}
+  document.getElementById('status').textContent='Connecting to relay...';
+  preWarmRelay().then(warmed=>{
+    let wsTried=false;
+    try{ws=new WebSocket(relayUrl);wsTried=true}catch(e){connectViaPolling(onOpen);return}
+    const wsTimeout=setTimeout(()=>{if(ws&&ws.readyState!==WebSocket.OPEN){try{ws.close()}catch(e){}ws=null;connectViaPolling(onOpen)}},4000);
+    ws.onopen=()=>{clearTimeout(wsTimeout);transport='ws';connected=true;if(rs){rs.textContent='Relay: WS connected';rs.className='relay-status connected'}sendPing();if(onOpen)onOpen()};
+    ws.onmessage=(e)=>{let data;try{data=JSON.parse(e.data)}catch(err){return}handleRelayMessage(data)};
+    ws.onclose=()=>{
+      clearTimeout(wsTimeout);
+      connected=false;
+      if(transport==='ws'){
+        if(rs){rs.textContent='Relay: disconnected';rs.className='relay-status error'}
+        // FIX: Auto-reconnect during active game
+        if(gameState&&gameState.phase!=='gameover'&&gameState.phase!=='menu'&&!practiceMode){
+          buildFlashes.push({x:W/2,y:H/2,timer:2,maxTimer:2,msg:'RECONNECTING...'});
+          if(!reconnectTimer){
+            reconnectTimer=setTimeout(()=>{
+              reconnectTimer=null;
+              if(gameState&&gameState.phase!=='gameover'&&!practiceMode){
+                connectRelay(()=>{
+                  if(isHost){
+                    relaySend({action:'create'});
+                  }else{
+                    const rid=roomId||document.getElementById('join-input').value.trim().toUpperCase();
+                    if(rid)relaySend({action:'join',roomId:rid});
+                  }
+                });
+              }
+            },2000);
+          }
+        }
+      }
+    };
+    ws.onerror=()=>{clearTimeout(wsTimeout)};
+  });
+}
+
+async function connectViaPolling(onOpen){
+  const rs=document.getElementById('relay-status');
+  if(rs){rs.textContent='Relay: trying polling...';rs.className='relay-status'}
+  document.getElementById('status').textContent='Trying HTTP polling...';
+  const ok=await pollOpen({action:'_open'});
+  if(ok){if(rs){rs.textContent='Relay: POLL connected';rs.className='relay-status connected'}document.getElementById('status').textContent='';if(onOpen)onOpen()}
+  else{connected=false;if(rs){rs.textContent='Relay: error';rs.className='relay-status error'}document.getElementById('status').textContent='Cannot connect to relay server.'}
+}
+
+function handleRelayMessage(data){
+  switch(data.action){
+    case'created':roomId=data.roomId;document.getElementById('menu').style.display='none';document.getElementById('waiting-screen').style.display='flex';document.getElementById('waiting-room-id').textContent=roomId;document.getElementById('status').textContent='';break;
+    case'joined':roomId=data.roomId;document.getElementById('status').textContent='Connected! Waiting for game state...';break;
+    case'peer_connected':document.getElementById('status').textContent='Opponent connected!';document.getElementById('waiting-screen').style.display='none';document.getElementById('menu').style.display='none';gameState=createGameState();startGameTicks();canvas.focus();relaySend({action:'data',payload:{t:'s',s:stripStateForNetwork(gameState)}});break;
+    case'data':
+      if(isHost){
+        if(data.payload&&data.payload.t==='i'){
+          remoteInput={w:!!data.payload.w,a:!!data.payload.a,s:!!data.payload.s,d:!!data.payload.d,space:!!data.payload.space,q:!!data.payload.q,mx:data.payload.mx,my:data.payload.my,lmb:!!data.payload.lmb,rmb:!!data.payload.rmb,buildMode:data.payload.buildMode||0,upgE:!!data.payload.upgE,upgR:!!data.payload.upgR,upgF:!!data.payload.upgF};
+          if(data.payload.playerShape)remotePlayerShape=data.payload.playerShape;
+          if(data.payload.playerColor)remotePlayerColor=data.payload.playerColor;
+          // Reset one-shot flags immediately after reading
+          data.payload.lmb=false;data.payload.rmb=false;
+        }
+      }else{
+        if(data.payload&&data.payload.t==='s'){
+          gameState=data.payload.s;if(gameState&&!gameState.particles)gameState.particles=[];
+          setGuestState(gameState);
+          if(!gameTickInterval)startGameTicks();
+          if(gameState&&gameState.phase!=='menu'){document.getElementById('menu').style.display='none';document.getElementById('waiting-screen').style.display='none';canvas.focus()}
+        }
+      }
+      break;
+    case'peer_disconnected':if(gameState&&gameState.phase!=='gameover'){gameState.phase='gameover';gameState.winner=myIndex;buildFlashes.push({x:W/2,y:H/2,timer:5,maxTimer:5,msg:'OPPONENT DISCONNECTED — YOU WIN!'})}break;
+    case'error':document.getElementById('status').textContent='Error: '+data.message;if(data.message&&(data.message.includes('not found')||data.message.includes('Room not found'))){document.getElementById('waiting-screen').style.display='none';document.getElementById('menu').style.display='flex'}break;
+    case'pong':pingMs=Math.round(performance.now()-lastPingTime);break;
+  }
+}
+
+function createRoom(){isHost=true;myIndex=0;practiceMode=false;relayUrl='';httpBase='';relayPathPrefix='';resolveRelayUrls();if(!relayUrl){document.getElementById('status').textContent='Enter Relay Server URL below!';return}BackgroundKeepAlive.start();connectRelay(()=>{relaySend({action:'create'})})}
+function joinRoom(){isHost=false;myIndex=1;practiceMode=false;const rid=document.getElementById('join-input').value.trim().toUpperCase();if(!rid){document.getElementById('status').textContent='Enter a Room Code';return}relayUrl='';httpBase='';relayPathPrefix='';resolveRelayUrls();if(!relayUrl){document.getElementById('status').textContent='Enter Relay Server URL below!';return}BackgroundKeepAlive.start();connectRelay(()=>{relaySend({action:'join',roomId:rid})})}
+function cancelWaiting(){if(ws){try{ws.close()}catch(e){}}ws=null;pollClose();transport=null;connected=false;roomId=null;BackgroundKeepAlive.stop();document.getElementById('waiting-screen').style.display='none';document.getElementById('menu').style.display='flex';document.getElementById('status').textContent=''}
+function copyRoomId(){const rid=document.getElementById('waiting-room-id').textContent;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(rid).then(()=>{const btn=document.querySelector('#waiting-screen .copy-btn');btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy Room Code',1500)}).catch(()=>{const range=document.createRange();range.selectNode(document.getElementById('waiting-room-id'));window.getSelection().removeAllRanges();window.getSelection().addRange(range)})}else{const range=document.createRange();range.selectNode(document.getElementById('waiting-room-id'));window.getSelection().removeAllRanges();window.getSelection().addRange(range)}}
+
+function backToMenu(){
+  gameState=null;stopGameTicks();
+  BackgroundKeepAlive.stop();
+  prevGuestState=null;curGuestState=null;
+  if(ws){try{ws.close()}catch(e){}}
+  ws=null;pollClose();transport=null;connected=false;roomId=null;
+  if(pingTimer){clearTimeout(pingTimer);pingTimer=null}
+  isHost=false;myIndex=0;practiceMode=false;
+  buildMode=0;buildFlashes=[];remoteInput=null;
+  floatingTexts=[];killFeed=[];screenShakeIntensity=0;screenShakeTimer=0;lavaBubbles=[];
+  document.getElementById('menu').style.display='flex';
+  document.getElementById('waiting-screen').style.display='none';
+  document.getElementById('status').textContent='';
+  initCustomization();
+}
+
+function startPractice(){isHost=true;myIndex=0;practiceMode=true;aiPaused=false;gameState=createGameState();BackgroundKeepAlive.start();startGameTicks();document.getElementById('menu').style.display='none';SoundManager.resume();canvas.focus()}
+function showTutorial(){document.getElementById('tutorial-overlay').style.display='flex'}
+function hideTutorial(){document.getElementById('tutorial-overlay').style.display='none'}
+
+function stripStateForNetwork(gs){
+  // FIX: Build lean state object instead of JSON.parse(JSON.stringify(gs))
+  // This avoids deep-cloning the entire game state (was 5-50KB per message × 20/sec)
+  return {
+    phase:gs.phase, countdown:gs.countdown, time:gs.time, winner:gs.winner,
+    mechs:gs.mechs.map(m=>({x:m.x,y:m.y,vx:m.vx,vy:m.vy,hp:m.hp,maxHp:m.maxHp,
+      facing:m.facing,dashing:m.dashing,dashTimer:m.dashTimer,dashCd:m.dashCd,
+      dashDx:m.dashDx,dashDy:m.dashDy,parrying:m.parrying,meleeing:m.meleeing,
+      meleeTimer:m.meleeTimer,meleeCd:m.meleeCd,shootCd:m.shootCd,
+      invTimer:m.invTimer,respawnTimer:m.respawnTimer,dead:m.dead,lastDamagedBy:m.lastDamagedBy,
+      shieldHp:m.shieldHp||0,shieldCd:m.shieldCd||0,shieldBroken:m.shieldBroken||false})),
+    cores:gs.cores.map(c=>({x:c.x,y:c.y,hp:c.hp,maxHp:c.maxHp})),
+    energy:[...gs.energy], connectedNodes:[...gs.connectedNodes],
+    buildings:gs.buildings.map(b=>({id:b.id,type:b.type,gx:b.gx,gy:b.gy,owner:b.owner,
+      hp:b.hp,maxHp:b.maxHp,connected:b.connected,fireCd:b.fireCd||0,
+      spawnTimer:b.spawnTimer||0,mobCount:b.mobCount||0})),
+    bullets:gs.bullets.map(b=>({x:b.x,y:b.y,vx:b.vx,vy:b.vy,owner:b.owner,dmg:b.dmg,reflected:b.reflected,life:b.life})),
+    tBullets:gs.tBullets.map(b=>({x:b.x,y:b.y,vx:b.vx,vy:b.vy,owner:b.owner,dmg:b.dmg,life:b.life,reflected:b.reflected})),
+    nodes:gs.nodes.map(n=>({gx:n.gx,gy:n.gy,owner:n.owner,ownerPriority:n.ownerPriority})),
+    mobs:(gs.mobs||[]).map(m=>({x:m.x,y:m.y,hp:m.hp,maxHp:m.maxHp,owner:m.owner,facing:m.facing,attackCd:m.attackCd,spawnerId:m.spawnerId})),
+    turretPlaceCd:[...gs.turretPlaceCd], spawnerPlaceCd:[...gs.spawnerPlaceCd],
+    meleeHitP1:gs.meleeHitP1, meleeHitP2:gs.meleeHitP2,
+    botsEliminated:gs.botsEliminated?[...gs.botsEliminated]:[false,false],
+    convPlaceCd:[...gs.convPlaceCd],
+    upgStrike:[...gs.upgStrike],upgBullet:[...gs.upgBullet],upgFort:[...gs.upgFort],
+    powerUps:(gs.powerUps||[]).map(pu=>({x:pu.x,y:pu.y,type:pu.type,timer:pu.timer,pulsePhase:pu.pulsePhase})),
+    puSpeedTimer:[...gs.puSpeedTimer],puShieldHp:[...gs.puShieldHp],puRapidTimer:[...gs.puRapidTimer],
+    lavaY:gs.lavaY,lavaTimer:gs.lavaTimer
+  };
+}
+
+function sendPing(){if(!connected)return;lastPingTime=performance.now();relaySend({action:'ping'});if(pingTimer)clearTimeout(pingTimer);pingTimer=setTimeout(sendPing,2000)}
+
+// Helper: check if a building is a connected conveyor whose owner is alive (invulnerable)
+function isConvProtected(gs,b){return b.type===1&&b.connected&&!gs.mechs[b.owner].dead}
+
+/*** BUILDING — FIXED adjacency check ***/
+function canPlaceBuild(gs,p,gx,gy,type){
+  if(gx<0||gx>=COLS||gy<0||gy>=ROWS)return false;
+  for(const b of gs.buildings)if(b.gx===gx&&b.gy===gy)return false;
+  // Core exclusion: use pixel bounding box (core is exactly 2x2 cells)
+  for(const c of gs.cores){
+    const cx1=c.x-CORE_SIZE/2, cy1=c.y-CORE_SIZE/2, cx2=c.x+CORE_SIZE/2, cy2=c.y+CORE_SIZE/2;
+    const cellX1=gx*CELL, cellY1=gy*CELL, cellX2=(gx+1)*CELL, cellY2=(gy+1)*CELL;
+    if(cellX1<cx2&&cellX2>cx1&&cellY1<cy2&&cellY2>cy1)return false;
+  }
+  for(const n of gs.nodes)if(n.gx===gx&&n.gy===gy)return false;
+  if(type===3&&gs.turretPlaceCd[p]>0)return false;
+  if(type===4&&gs.spawnerPlaceCd[p]>0)return false;
+  if(type===1&&gs.convPlaceCd[p]>0)return false;
+  // Must be on own side OR adjacent to own building/core/node
+  const mySide=(p===0&&gx<20)||(p===1&&gx>=20);
+  // FIXED: Check adjacency to own buildings (including conveyors) — this was the bug
+  // Conveyors can be placed next to ANY own building, not just conveyors
+  const adjOwnBld=gs.buildings.some(b=>b.owner===p&&Math.abs(b.gx-gx)+Math.abs(b.gy-gy)<=1);
+  const cc=toGrid(gs.cores[p].x,gs.cores[p].y);
+  const adjCore=Math.abs(gx-cc.gx)<=2&&Math.abs(gy-cc.gy)<=2;
+  const adjNode=gs.nodes.some(n=>Math.abs(n.gx-gx)+Math.abs(n.gy-gy)<=1);
+  if(!mySide&&!adjOwnBld&&!adjCore&&!adjNode)return false;
+  const cost=type===1?CONV_COST:type===2?WALL_COST:type===3?TURR_COST:SPAWNER_COST;
+  return gs.energy[p]>=cost;
+}
+
+let _bldId=0;
+function placeBuild(gs,p,gx,gy,type){
+  const cost=type===1?CONV_COST:type===2?WALL_COST:type===3?TURR_COST:SPAWNER_COST;
+  gs.energy[p]-=cost;
+  const hp=type===1?CONV_HP:type===2?WALL_HP:type===3?TURR_HP:SPAWNER_HP;
+  const bld={id:++_bldId,type,gx,gy,owner:p,hp,maxHp:hp,connected:false,fireCd:0};
+  if(type===4){bld.spawnTimer=0;bld.mobCount=0}
+  gs.buildings.push(bld);
+  if(type===3)gs.turretPlaceCd[p]=TURRET_PLACE_CD;
+  if(type===4)gs.spawnerPlaceCd[p]=SPAWNER_PLACE_CD;
+  if(type===1)gs.convPlaceCd[p]=CONV_PLACE_CD;
+  const bc=gridCtr(gx,gy);
+  buildFlashes.push({x:bc.x,y:bc.y,timer:0.4,maxTimer:0.4});
+  if(buildFlashes.length>30)buildFlashes.shift();
+  SoundManager.play('building');
+}
+
+/*** PARTICLES ***/
+function spawnPx(gs,x,y,col,n){if(gs.particles.length>300)return;for(let i=0;i<n;i++){const a=rng(0,Math.PI*2),sp=rng(50,220);gs.particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:rng(0.15,0.5),maxLife:0.5,color:col,r:rng(1.5,4.5)})}}
+function spawnHitPx(gs,x,y,col){if(gs.particles.length>300)return;for(let i=0;i<5;i++){const a=rng(0,Math.PI*2),sp=rng(80,180);gs.particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:rng(0.1,0.35),maxLife:0.35,color:col,r:rng(1,3)})}}
+
+/*** SPAWNER & MOB LOGIC ***/
+function updateSpawners(gs,dt){
+  for(const b of gs.buildings){
+    if(b.type!==4)continue;
+    if(b.spawnTimer===undefined)b.spawnTimer=0;
+    if(b.mobCount===undefined)b.mobCount=0;
+    b.spawnTimer+=dt;
+    if(b.spawnTimer>=SPAWNER_INTERVAL&&b.mobCount<MAX_MOBS_PER_SPAWNER){
+      b.spawnTimer=0;
+      const bc=gridCtr(b.gx,b.gy);
+      gs.mobs.push({x:bc.x,y:bc.y,hp:MOB_HP,maxHp:MOB_HP,owner:b.owner,facing:b.owner===0?0:Math.PI,attackCd:0,spawnerId:b.id});
+      b.mobCount++;
+      spawnPx(gs,bc.x,bc.y,pmc(b.owner),4);
+    }
+  }
+}
+
+function updateMobs(gs,dt){
+  for(let mi=gs.mobs.length-1;mi>=0;mi--){
+    const mob=gs.mobs[mi];
+    if(mob.hp<=0){
+      spawnPx(gs,mob.x,mob.y,pmc(mob.owner),6);
+      const spawner=gs.buildings.find(b=>b.id===mob.spawnerId);
+      if(spawner&&spawner.mobCount>0)spawner.mobCount--;
+      gs.mobs.splice(mi,1);continue;
+    }
+    let targetX=gs.cores[1-mob.owner].x,targetY=gs.cores[1-mob.owner].y;
+    // Attack nearest enemy building
+    let nearestBldDist=Infinity,nearestBldX=targetX,nearestBldY=targetY;
+    for(const b of gs.buildings){
+      if(b.owner===mob.owner)continue;
+      const bc=gridCtr(b.gx,b.gy);
+      const d=Math.hypot(mob.x-bc.x,mob.y-bc.y);
+      if(d<nearestBldDist){nearestBldDist=d;nearestBldX=bc.x;nearestBldY=bc.y}
+    }
+    const em=gs.mechs[1-mob.owner];
+    if(!em.dead){const dPlayer=Math.hypot(mob.x-em.x,mob.y-em.y);if(dPlayer<200){targetX=em.x;targetY=em.y}}
+    if(nearestBldDist<200){targetX=nearestBldX;targetY=nearestBldY}
+    const dx=targetX-mob.x,dy=targetY-mob.y,d=Math.hypot(dx,dy)||0.01;
+    mob.x+=(dx/d)*MOB_SPEED*dt;mob.y+=(dy/d)*MOB_SPEED*dt;
+    mob.facing=Math.atan2(dy,dx);
+    mob.x=clamp(mob.x,MOB_R,W-MOB_R);mob.y=clamp(mob.y,MOB_R,H-MOB_R);
+    if(mob.attackCd>0)mob.attackCd-=dt;
+    // Attack enemy player
+    if(!em.dead&&mob.attackCd<=0){
+      if(circleCircle(mob.x,mob.y,MOB_R,em.x,em.y,MECH_R)){
+        if(em.invTimer<=0){em.hp-=MOB_DMG_PLAYER;spawnHitPx(gs,mob.x,mob.y,pmc(mob.owner));addFloatingText(em.x,em.y-MECH_R,'-'+MOB_DMG_PLAYER,pmc(mob.owner));mob.attackCd=MOB_ATTACK_CD}
+      }
+    }
+    // Attack enemy buildings (skip protected conveyors)
+    if(mob.attackCd<=0){
+      for(let bi=gs.buildings.length-1;bi>=0;bi--){
+        const b=gs.buildings[bi];if(b.owner===mob.owner)continue;
+        if(isConvProtected(gs,b))continue;
+        const bc=gridCtr(b.gx,b.gy);
+        if(rectCircle(bc.x-CELL/2,bc.y-CELL/2,CELL,CELL,mob.x,mob.y,MOB_R)){
+          b.hp-=MOB_DMG_BUILDING;spawnHitPx(gs,bc.x,bc.y,'#fa0');mob.attackCd=MOB_ATTACK_CD;break;
+        }
+      }
+    }
+    // Attack enemy core (only if defender dead)
+    if(mob.attackCd<=0){
+      const eco=gs.cores[1-mob.owner];
+      if(rectCircle(eco.x-CORE_SIZE/2,eco.y-CORE_SIZE/2,CORE_SIZE,CORE_SIZE,mob.x,mob.y,MOB_R)){
+        const defender=gs.mechs[1-mob.owner];
+        if(defender.dead){eco.hp-=MOB_DMG_BUILDING;spawnHitPx(gs,eco.x,eco.y,'#f44');addFloatingText(eco.x,eco.y-CORE_SIZE/2,'-'+MOB_DMG_BUILDING,'#f44');mob.attackCd=MOB_ATTACK_CD}
+      }
+    }
+  }
+}
+
+/*** UPDATE ***/
+function updateGame(gs,dt){
+  if(gs.phase==='countdown'){gs.countdown-=dt;gs.time+=dt;animTime=gs.time;if(gs.countdown<=0){gs.phase='playing';gs.countdown=0}return}
+  if(gs.phase==='gameover')return;
+  gs.time+=dt;animTime=gs.time;
+  for(let p=0;p<2;p++){if(gs.turretPlaceCd[p]>0)gs.turretPlaceCd[p]-=dt;if(gs.spawnerPlaceCd[p]>0)gs.spawnerPlaceCd[p]-=dt;if(gs.convPlaceCd[p]>0)gs.convPlaceCd[p]-=dt}
+
+  const inp=[null,null];
+  inp[0]=captureInput();
+  if(practiceMode){
+    if(!aiPaused)inp[1]=getAIInput(gs,1);
+    else inp[1]={w:false,a:false,s:false,d:false,space:false,q:false,mx:gs.mechs[1].x,my:gs.mechs[1].y,lmb:false,rmb:false,buildMode:0};
+  }else{
+    if(remoteInput){inp[1]={w:!!remoteInput.w,a:!!remoteInput.a,s:!!remoteInput.s,d:!!remoteInput.d,space:!!remoteInput.space,q:!!remoteInput.q,mx:remoteInput.mx,my:remoteInput.my,lmb:!!remoteInput.lmb,rmb:!!remoteInput.rmb,buildMode:remoteInput.buildMode||0};remoteInput.lmb=false;remoteInput.rmb=false}
+  }
+
+  for(let p=0;p<2;p++){
+    const m=gs.mechs[p],i=inp[p];if(!i)continue;
+    if(m.dead){
+      m.respawnTimer-=dt;
+      // Bot elimination: if bot dies 3 times, it stays dead (eliminated)
+      if(practiceMode&&p===1){
+        if(!gs.botsEliminated)gs.botsEliminated=[false,false];
+        // Bots can now be eliminated like players — no special logic needed
+      }
+      if(m.respawnTimer<=0){m.dead=false;const fortH=[0,25,50,80][gs.upgFort?gs.upgFort[p]:0];m.hp=MECH_HP+fortH;m.maxHp=MECH_HP+fortH;m.x=CORE_CTR[p].x;m.y=CORE_CTR[p].y-50;m.vx=0;m.vy=0;m.invTimer=1.5;m.shieldHp=SHIELD_MAX_HP;m.shieldCd=0;m.shieldBroken=false;spawnPx(gs,m.x,m.y,pcol(p),10)}
+      continue;
+    }
+    m.facing=Math.atan2(i.my-m.y,i.mx-m.x);
+    m.parrying=i.q&&!m.dashing&&!m.meleeing;
+    if(i.rmb&&!m.meleeing&&m.meleeCd<=0&&!m.dashing&&!m.parrying){m.meleeing=true;m.meleeTimer=MELEE_DUR;m.meleeCd=MELEE_CD;if(p===0)gs.meleeHitP1=false;else gs.meleeHitP2=false}
+    if(m.meleeing){m.meleeTimer-=dt;if(m.meleeTimer<=0)m.meleeing=false}
+    if(m.meleeCd>0)m.meleeCd-=dt;
+    if(i.space&&!m.dashing&&m.dashCd<=0&&!m.meleeing){m.dashing=true;m.dashTimer=DASH_DUR;m.dashCd=DASH_CD;m.dashDx=Math.cos(m.facing);m.dashDy=Math.sin(m.facing);m.invTimer=DASH_DUR;SoundManager.play('dash')}
+    if(m.dashing){m.dashTimer-=dt;if(m.dashTimer<=0)m.dashing=false}
+    if(m.dashCd>0)m.dashCd-=dt;
+    if(m.invTimer>0)m.invTimer-=dt;
+    // Shield cooldown and recharging
+    if(m.shieldCd>0){m.shieldCd-=dt;if(m.shieldCd<=0){m.shieldHp=SHIELD_MAX_HP;m.shieldBroken=false}}
+
+    // UPGRADES (one-shot)
+    if(i.upgE&&gs.upgStrike[p]<MAX_UPG_LEVEL&&gs.energy[p]>=UPG_STRIKE_COSTS[gs.upgStrike[p]]){gs.energy[p]-=UPG_STRIKE_COSTS[gs.upgStrike[p]];gs.upgStrike[p]++;buildFlashes.push({x:W/2,y:H/2-40,timer:1.5,maxTimer:1.5,msg:'STRIKE LV'+gs.upgStrike[p]});SoundManager.play('nodeCapture')}
+    if(i.upgR&&gs.upgBullet[p]<MAX_UPG_LEVEL&&gs.energy[p]>=UPG_BULLET_COSTS[gs.upgBullet[p]]){gs.energy[p]-=UPG_BULLET_COSTS[gs.upgBullet[p]];gs.upgBullet[p]++;buildFlashes.push({x:W/2,y:H/2-40,timer:1.5,maxTimer:1.5,msg:'BULLET LV'+gs.upgBullet[p]});SoundManager.play('nodeCapture')}
+    if(i.upgF&&gs.upgFort[p]<MAX_UPG_LEVEL&&gs.energy[p]>=UPG_FORT_COSTS[gs.upgFort[p]]){gs.energy[p]-=UPG_FORT_COSTS[gs.upgFort[p]];gs.upgFort[p]++;const hpB=[0,25,50,80][gs.upgFort[p]];gs.mechs[p].maxHp=MECH_HP+hpB;gs.mechs[p].hp=Math.min(gs.mechs[p].hp+hpB,gs.mechs[p].maxHp);buildFlashes.push({x:W/2,y:H/2-40,timer:1.5,maxTimer:1.5,msg:'FORTIFY LV'+gs.upgFort[p]});SoundManager.play('nodeCapture')}
+
+    // MOVEMENT
+    if(!m.dashing){let ax=0,ay=0;if(i.w)ay=-1;if(i.s)ay=1;if(i.a)ax=-1;if(i.d)ax=1;const len=Math.hypot(ax,ay);if(len>0){ax/=len;ay/=len;m.vx+=ax*MECH_ACCEL*dt;m.vy+=ay*MECH_ACCEL*dt}m.vx*=MECH_FRICTION;m.vy*=MECH_FRICTION;let maxSpd=MECH_MAX_SPEED;if(gs.puSpeedTimer[p]>0)maxSpd*=PU_SPEED_MULT;const sp=Math.hypot(m.vx,m.vy);if(sp>maxSpd){m.vx*=maxSpd/sp;m.vy*=maxSpd/sp}}else{m.vx=m.dashDx*DASH_SPEED;m.vy=m.dashDy*DASH_SPEED}
+    if(m.parrying){m.vx*=0.65;m.vy*=0.65}
+    m.x+=m.vx*dt;m.y+=m.vy*dt;m.x=clamp(m.x,MECH_R,W-MECH_R);m.y=clamp(m.y,MECH_R,H-MECH_R);
+
+    // SHOOT
+    if(m.shootCd>0)m.shootCd-=dt;
+    let effShootCd=SHOOT_CD;if(gs.puRapidTimer[p]>0)effShootCd*=PU_RAPID_MULT;
+    if(i.lmb&&!m.dashing&&!m.parrying&&i.buildMode===0&&m.shootCd<=0){
+      if(gs.energy[p]>=BULLET_COST){
+        gs.energy[p]-=BULLET_COST;m.shootCd=effShootCd;
+        const bulletLv=gs.upgBullet[p];
+        const effBulletSpeed=BULLET_SPEED+bulletLv*300;
+        const effBulletDmg=BULLET_DMG+bulletLv*2;
+        const bx=m.x+Math.cos(m.facing)*22,by=m.y+Math.sin(m.facing)*22;
+        gs.bullets.push({x:bx,y:by,vx:Math.cos(m.facing)*effBulletSpeed,vy:Math.sin(m.facing)*effBulletSpeed,owner:p,dmg:effBulletDmg,reflected:false,life:BULLET_LIFE});
+        SoundManager.play('shoot');
+      }
+    }
+    // BUILD PLACE
+    if(i.lmb&&i.buildMode>0){
+      const gx=Math.floor(i.mx/CELL),gy=Math.floor(i.my/CELL);
+      if(gx>=0&&gx<COLS&&gy>=0&&gy<ROWS){
+        if(canPlaceBuild(gs,p,gx,gy,i.buildMode))placeBuild(gs,p,gx,gy,i.buildMode);
+      }
+    }
+  }
+
+  // COLLISIONS — mech vs wall/turret
+  for(let p=0;p<2;p++){const m=gs.mechs[p];if(m.dead)continue;for(const b of gs.buildings){if(b.type===1)continue;if(b.owner===p)continue;const bc=gridCtr(b.gx,b.gy),bx=bc.x-CELL/2,by=bc.y-CELL/2;if(rectCircle(bx,by,CELL,CELL,m.x,m.y,MECH_R)){const cx=clamp(m.x,bx,bx+CELL),cy=clamp(m.y,by,by+CELL),dx=m.x-cx,dy=m.y-cy,d=Math.hypot(dx,dy)||0.01,ov=MECH_R-d;if(ov>0){m.x+=dx/d*ov;m.y+=dy/d*ov}}}for(const c of gs.cores){if(rectCircle(c.x-CORE_SIZE/2,c.y-CORE_SIZE/2,CORE_SIZE,CORE_SIZE,m.x,m.y,MECH_R)){const cx=clamp(m.x,c.x-CORE_SIZE/2,c.x+CORE_SIZE/2),cy=clamp(m.y,c.y-CORE_SIZE/2,c.y+CORE_SIZE/2),dx=m.x-cx,dy=m.y-cy,d=Math.hypot(dx,dy)||0.01,ov=MECH_R-d;if(ov>0){m.x+=dx/d*ov;m.y+=dy/d*ov}}}}
+
+  // Mech vs mech
+  {const m0=gs.mechs[0],m1=gs.mechs[1];if(!m0.dead&&!m1.dead){const dx=m1.x-m0.x,dy=m1.y-m0.y,d=Math.hypot(dx,dy)||0.01,ov=MECH_R*2-d;if(ov>0){const nx=dx/d,ny=dy/d;m0.x-=nx*ov/2;m0.y-=ny*ov/2;m1.x+=nx*ov/2;m1.y+=ny*ov/2;const rvx=m0.vx-m1.vx,rvy=m0.vy-m1.vy,dot=rvx*nx+rvy*ny;if(dot>0){m0.vx-=dot*nx*0.5;m0.vy-=dot*ny*0.5;m1.vx+=dot*nx*0.5;m1.vy+=dot*ny*0.5}}if(d<MECH_R*2+8){if(m0.dashing&&m1.invTimer<=0){const dd=applyDmgToMech(gs,1,DASH_DMG);m1.hp-=dd;m1.vx+=m0.dashDx*280;m1.vy+=m0.dashDy*280;spawnPx(gs,m1.x,m1.y,'#0ff',6);SoundManager.play('hit');addFloatingText(m1.x,m1.y-MECH_R,'-'+dd,'#0ff');triggerScreenShake(4,0.15)}if(m1.dashing&&m0.invTimer<=0){const dd=applyDmgToMech(gs,0,DASH_DMG);m0.hp-=dd;m0.vx+=m1.dashDx*280;m0.vy+=m1.dashDy*280;spawnPx(gs,m0.x,m0.y,'#f60',6);SoundManager.play('hit');addFloatingText(m0.x,m0.y-MECH_R,'-'+dd,'#f60');triggerScreenShake(4,0.15)}}}}
+
+  // Melee — with Strike upgrade
+  for(let p=0;p<2;p++){const m=gs.mechs[p];if(!m.meleeing||m.dead)continue;const prog=1-m.meleeTimer/MELEE_DUR;if(prog<0.2||prog>0.75)continue;const strikeLv=gs.upgStrike[p];const effMeleeDmg=MELEE_DMG_MECH+strikeLv*7;const effMeleeRange=MELEE_RANGE+strikeLv*12;const effHalfW=strikeLv>=2?MELEE_HALF_W+10:MELEE_HALF_W;const hx=m.x+Math.cos(m.facing)*effMeleeRange,hy=m.y+Math.sin(m.facing)*effMeleeRange,hf=p===0?'meleeHitP1':'meleeHitP2';const ep=1-p,em=gs.mechs[ep];
+    if(!em.dead&&!gs[hf]&&Math.hypot(hx-em.x,hy-em.y)<MECH_R+effHalfW){if(em.invTimer<=0){const dmg=applyDmgToMech(gs,ep,effMeleeDmg);em.hp-=dmg;em.vx+=Math.cos(m.facing)*MELEE_KB;em.vy+=Math.sin(m.facing)*MELEE_KB;gs[hf]=true;spawnPx(gs,em.x,em.y,'#ff0',10);SoundManager.play('melee');SoundManager.play('hit');addFloatingText(em.x,em.y-MECH_R,'-'+dmg,'#ff0');triggerScreenShake(5,0.15);addKillFeed('P'+(p+1)+' hit P'+(ep+1)+'!','#ff0')}}
+    // Strike Lv3: AoE cleave
+    if(strikeLv>=3&&!gs[hf]){const cleaveArc=Math.PI*0.39;if(!em.dead&&em.invTimer<=0){const distToEm=Math.hypot(m.x-em.x,m.y-em.y);const angToEm=Math.atan2(em.y-m.y,em.x-m.x);if(distToEm<effMeleeRange+MECH_R&&Math.abs(normAngle(angToEm-m.facing))<cleaveArc/2){const aDmg=applyDmgToMech(gs,ep,Math.round(effMeleeDmg*0.5));em.hp-=aDmg;em.vx+=Math.cos(m.facing)*MELEE_KB*0.5;em.vy+=Math.sin(m.facing)*MELEE_KB*0.5;gs[hf]=true;spawnPx(gs,em.x,em.y,'#ff0',6);SoundManager.play('melee');addFloatingText(em.x,em.y-MECH_R,'-'+aDmg,'#ff0');triggerScreenShake(4,0.12)}}}
+    for(let bi=gs.buildings.length-1;bi>=0;bi--){const b=gs.buildings[bi];if(b.owner===p)continue;if(isConvProtected(gs,b))continue;const bc=gridCtr(b.gx,b.gy);if(Math.hypot(hx-bc.x,hy-bc.y)<CELL*0.7+effHalfW){b.hp-=effMeleeDmg;spawnPx(gs,bc.x,bc.y,'#fa0',8);SoundManager.play('hit');addFloatingText(bc.x,bc.y,'-'+effMeleeDmg,'#fa0')}}
+    // Melee hits mobs
+    if(gs.mobs)for(const mob of gs.mobs){if(mob.owner===p)continue;if(Math.hypot(hx-mob.x,hy-mob.y)<MOB_R+effHalfW){mob.hp-=effMeleeDmg;spawnHitPx(gs,mob.x,mob.y,'#fa0');SoundManager.play('hit');addFloatingText(mob.x,mob.y-MOB_R,'-'+effMeleeDmg,'#fa0')}}
+    const eco=gs.cores[ep];
+    if(Math.hypot(hx-eco.x,hy-eco.y)<CORE_SIZE/2+effHalfW){if(gs.mechs[ep].dead){const coreDmg=Math.round(effMeleeDmg*0.4);eco.hp-=coreDmg;spawnPx(gs,eco.x,eco.y,'#f00',5);SoundManager.play('coreHit');addFloatingText(eco.x,eco.y-CORE_SIZE/2,'-'+coreDmg,'#f44');triggerScreenShake(6,0.2);addKillFeed('P'+(p+1)+' hits core!','#f44')}}
+  }
+
+  // Bullets
+  for(let bi=gs.bullets.length-1;bi>=0;bi--){const b=gs.bullets[bi];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(b.life<=0||b.x<-10||b.x>W+10||b.y<-10||b.y>H+10){gs.bullets.splice(bi,1);continue}let hit=false;
+    for(let p=0;p<2;p++){if(p===b.owner&&!b.reflected)continue;const m=gs.mechs[p];if(m.dead||m.invTimer>0)continue;
+      if(m.parrying){if(pointInArc(b.x,b.y,m.x,m.y,m.facing,PARRY_ARC/2,PARRY_DIST)){
+        if(m.shieldHp>0&&(m.shieldCd||0)<=0){
+          m.shieldHp--;
+          if(m.shieldHp<=0){m.shieldBroken=true;m.shieldCd=SHIELD_BREAK_CD;spawnPx(gs,m.x,m.y,'#88f',10)}
+          else{spawnPx(gs,b.x,b.y,'#aaf',3)}
+          hit=true;break;
+        }else{
+          const spd=Math.hypot(b.vx,b.vy)*1.35,refAng=Math.atan2(-b.vy,-b.vx)+rng(-0.15,0.15);b.vx=Math.cos(refAng)*spd;b.vy=Math.sin(refAng)*spd;b.owner=p;b.reflected=true;b.dmg=Math.ceil(b.dmg*1.5);spawnPx(gs,b.x,b.y,'#fff',5);SoundManager.play('parry');continue}
+      }}
+      if(circleCircle(b.x,b.y,5,m.x,m.y,MECH_R)){let bd=b.dmg;if(gs.puShieldHp[p]>0){const abs=Math.min(gs.puShieldHp[p],bd);gs.puShieldHp[p]-=abs;bd-=abs;if(abs>0)addFloatingText(m.x,m.y-MECH_R-8,'SHIELD -'+abs,'#08f')}if(bd>0){const rd=applyDmgToMech(gs,p,bd);m.hp-=rd;spawnHitPx(gs,b.x,b.y,b.reflected?'#fff':'#f80');SoundManager.play('hit');addFloatingText(m.x,m.y-MECH_R,'-'+rd,'#fff')}hit=true;break}
+    }
+    if(hit){gs.bullets.splice(bi,1);continue}
+    for(let bbi=gs.buildings.length-1;bbi>=0;bbi--){const bld=gs.buildings[bbi];if(bld.owner===b.owner&&!b.reflected)continue;if(isConvProtected(gs,bld))continue;const bc=gridCtr(bld.gx,bld.gy);if(rectCircle(bc.x-CELL/2,bc.y-CELL/2,CELL,CELL,b.x,b.y,5)){bld.hp-=b.dmg;spawnHitPx(gs,b.x,b.y,'#fa0');hit=true;break}}
+    if(hit){gs.bullets.splice(bi,1);continue}
+    for(let p=0;p<2;p++){if(p===b.owner&&!b.reflected)continue;const co=gs.cores[p];if(rectCircle(co.x-CORE_SIZE/2,co.y-CORE_SIZE/2,CORE_SIZE,CORE_SIZE,b.x,b.y,5)){if(gs.mechs[p].dead){co.hp-=b.dmg;spawnHitPx(gs,b.x,b.y,'#f44');SoundManager.play('coreHit');addFloatingText(co.x,co.y-CORE_SIZE/2,'-'+b.dmg,'#f44');triggerScreenShake(6,0.2)}hit=true;break}}
+    if(hit){gs.bullets.splice(bi,1);continue}
+    if(!hit&&gs.mobs){for(const mob of gs.mobs){if(mob.owner===b.owner)continue;if(circleCircle(b.x,b.y,5,mob.x,mob.y,MOB_R)){mob.hp-=b.dmg;spawnHitPx(gs,b.x,b.y,'#fa0');hit=true;break}}}
+    for(const bld of gs.buildings){if(bld.type===2&&bld.owner!==b.owner){const bc=gridCtr(bld.gx,bld.gy);if(rectCircle(bc.x-CELL/2,bc.y-CELL/2,CELL,CELL,b.x,b.y,5)){hit=true;break}}}
+    if(hit)gs.bullets.splice(bi,1)
+  }
+
+  // Orphan mob cleanup
+  for(const b of gs.buildings){if(b.type===4&&b.hp<=0&&b.mobCount>0){b.mobCount=0;for(const mob of gs.mobs){if(mob.spawnerId===b.id)mob.spawnerId=-1}}}
+  // Protected conveyors never get removed
+  gs.buildings=gs.buildings.filter(b=>b.hp>0||isConvProtected(gs,b));
+
+  // Turrets
+  for(const b of gs.buildings){if(b.type!==3)continue;if(b.fireCd===undefined)b.fireCd=0;if(b.fireCd>0){b.fireCd-=dt;continue}const bc=gridCtr(b.gx,b.gy),ep=1-b.owner,em=gs.mechs[ep];let target=null,minD=TURR_RANGE;if(!em.dead){const d1=Math.hypot(bc.x-em.x,bc.y-em.y);if(d1<minD){minD=d1;target={x:em.x,y:em.y}}}const eco=gs.cores[ep],d2=Math.hypot(bc.x-eco.x,bc.y-eco.y);if(d2<minD&&em.dead){minD=d2;target={x:eco.x,y:eco.y}}if(target&&gs.energy[b.owner]>=TURR_ENERGY_COST){gs.energy[b.owner]-=TURR_ENERGY_COST;b.fireCd=TURR_FIRE_RATE;const ang=Math.atan2(target.y-bc.y,target.x-bc.x);gs.tBullets.push({x:bc.x,y:bc.y,vx:Math.cos(ang)*BULLET_SPEED*0.85,vy:Math.sin(ang)*BULLET_SPEED*0.85,owner:b.owner,dmg:TURR_DMG,life:1.4,reflected:false});spawnPx(gs,bc.x+Math.cos(ang)*20,bc.y+Math.sin(ang)*20,b.owner===0?P1C:P2C,3)}}
+
+  // Turret bullets
+  for(let bi=gs.tBullets.length-1;bi>=0;bi--){const b=gs.tBullets[bi];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(b.life<=0||b.x<-10||b.x>W+10||b.y<-10||b.y>H+10){gs.tBullets.splice(bi,1);continue}let hit=false;const ep=1-b.owner,em=gs.mechs[ep];if(!em.dead&&em.invTimer<=0&&circleCircle(b.x,b.y,4,em.x,em.y,MECH_R)){em.hp-=b.dmg;hit=true;spawnHitPx(gs,b.x,b.y,'#fa0');addFloatingText(em.x,em.y-MECH_R,'-'+b.dmg,'#fa0');SoundManager.play('hit')}if(!hit)for(const bld of gs.buildings){if(bld.owner===b.owner)continue;if(isConvProtected(gs,bld))continue;if(bld.type===2||bld.type===4||bld.type===3){const bc=gridCtr(bld.gx,bld.gy);if(rectCircle(bc.x-CELL/2,bc.y-CELL/2,CELL,CELL,b.x,b.y,4)){bld.hp-=b.dmg;hit=true;break}}}if(!hit&&gs.mobs){for(const mob of gs.mobs){if(mob.owner===b.owner)continue;if(circleCircle(b.x,b.y,4,mob.x,mob.y,MOB_R)){mob.hp-=b.dmg;spawnHitPx(gs,b.x,b.y,'#fa0');hit=true;break}}}if(!hit){const eco=gs.cores[ep];if(rectCircle(eco.x-CORE_SIZE/2,eco.y-CORE_SIZE/2,CORE_SIZE,CORE_SIZE,b.x,b.y,4)){if(em.dead){eco.hp-=b.dmg;spawnHitPx(gs,b.x,b.y,'#f44');SoundManager.play('coreHit');addFloatingText(eco.x,eco.y-CORE_SIZE/2,'-'+b.dmg,'#f44')}hit=true}}if(hit)gs.tBullets.splice(bi,1)}
+
+  // Spawners & Mobs
+  updateSpawners(gs,dt);
+  updateMobs(gs,dt);
+
+  // Energy
+  computeEnergy(gs);
+  for(let p=0;p<2;p++){
+    let eGen=BASE_ENERGY_RATE+gs.connectedNodes[p]*NODE_RATE;
+    if(!isFinite(eGen))eGen=BASE_ENERGY_RATE;
+    gs.energy[p]=Math.min(MAX_ENERGY,Math.max(0,gs.energy[p]+eGen*dt));
+  }
+  // Tower energy drain (count without allocating new array)
+  for(let p=0;p<2;p++){
+    let turretCount=0;
+    for(const b of gs.buildings){if(b.owner===p&&b.type===3)turretCount++;}
+    if(turretCount>0)gs.energy[p]=Math.max(0,gs.energy[p]-turretCount*0.15*dt);
+  }
+
+  // Particles
+  // Particles
+  for(let pi=gs.particles.length-1;pi>=0;pi--){const p2=gs.particles[pi];p2.x+=p2.vx*dt;p2.y+=p2.vy*dt;p2.life-=dt;if(p2.life<=0)gs.particles.splice(pi,1)}
+  for(let fi=buildFlashes.length-1;fi>=0;fi--){buildFlashes[fi].timer-=dt;if(buildFlashes[fi].timer<=0)buildFlashes.splice(fi,1)}
+
+  // Visual effects update
+  updateScreenShake(dt);
+  updateFloatingTexts(dt);
+  updateKillFeed(dt);
+
+  // POWER-UP SPAWNING
+  gs.puSpawnTimer-=dt;
+  if(gs.puSpawnTimer<=0){const type=[PU_SPEED,PU_SHIELD,PU_RAPID][rngInt(0,2)];const gx=rngInt(17,22),gy=rngInt(2,ROWS-3);const pos=gridCtr(gx,gy);gs.powerUps.push({x:pos.x,y:pos.y,type,timer:30,pulsePhase:Math.random()*Math.PI*2});gs.puSpawnTimer=rng(PU_SPAWN_MIN,PU_SPAWN_MAX)}
+  for(let pui=gs.powerUps.length-1;pui>=0;pui--){const pu=gs.powerUps[pui];pu.timer-=dt;pu.pulsePhase+=dt*4;if(pu.timer<=0){gs.powerUps.splice(pui,1);continue}for(let p=0;p<2;p++){const m=gs.mechs[p];if(m.dead)continue;if(Math.hypot(m.x-pu.x,m.y-pu.y)<MECH_R+18){if(pu.type===PU_SPEED){gs.puSpeedTimer[p]=PU_SPEED_DUR;addFloatingText(m.x,m.y-MECH_R,'SPEED!','#0f0')}else if(pu.type===PU_SHIELD){gs.puShieldHp[p]=PU_SHIELD_HP;addFloatingText(m.x,m.y-MECH_R,'SHIELD!','#08f')}else{gs.puRapidTimer[p]=PU_RAPID_DUR;addFloatingText(m.x,m.y-MECH_R,'RAPID!','#f44')}SoundManager.play('nodeCapture');spawnPx(gs,pu.x,pu.y,pu.type===PU_SPEED?'#0f0':pu.type===PU_SHIELD?'#08f':'#f44',8);gs.powerUps.splice(pui,1);break}}}
+  for(let p=0;p<2;p++){if(gs.puSpeedTimer[p]>0)gs.puSpeedTimer[p]-=dt;if(gs.puRapidTimer[p]>0)gs.puRapidTimer[p]-=dt}
+
+  // LAVA ZONE
+  gs.lavaTimer-=dt;if(gs.lavaTimer<=0){gs.lavaTimer=30;gs.lavaY=clamp(gs.lavaY+rngInt(-2,2),2,ROWS-7)}
+  for(let p=0;p<2;p++){const m=gs.mechs[p];if(m.dead||m.invTimer>0)continue;const mg=Math.floor(m.y/CELL),mgx=Math.floor(m.x/CELL);if(mgx>=LAVA_COLS_MIN&&mgx<=LAVA_COLS_MAX&&mg>=gs.lavaY&&mg<=gs.lavaY+4){m.hp-=applyDmgToMech(gs,p,LAVA_DMG_PER_SEC*dt);m.lastDamagedBy=1-p;if(Math.random()<0.3)lavaBubbles.push({x:m.x+rng(-10,10),y:m.y+rng(-10,10),vy:rng(-40,-20),life:rng(0.2,0.5),maxLife:0.5})}}
+
+  // Win check
+  for(let p=0;p<2;p++){
+    const m=gs.mechs[p];
+    if(m.hp<=0&&!m.dead){
+      m.dead=true;m.hp=0;m.respawnTimer=RESPAWN_TIME;
+      spawnPx(gs,m.x,m.y,pcol(p),15);
+      SoundManager.play('death');
+      addKillFeed('P'+(p+1)+' eliminated!','#f44');
+      addFloatingText(m.x,m.y-MECH_R,'ELIMINATED','#f44');
+      triggerScreenShake(8,0.3);
+    }
+    if(gs.cores[p].hp<=0){gs.phase='gameover';gs.winner=1-p;if(gs.winner===myIndex){SoundManager.play('victory');addKillFeed('VICTORY!','#0f0')}else{SoundManager.play('defeat');addKillFeed('DEFEAT!','#f44')}}
+  }
+}
+
+/*** RENDER ***/
+function render(gs){
+  ctx.save();
+  ctx.translate(screenShakeX,screenShakeY);
+  ctx.fillStyle='#0a0a1e';ctx.fillRect(-10,-10,W+20,H+20);
+  // Grid
+  ctx.strokeStyle='#181835';ctx.lineWidth=0.5;for(let x=0;x<=W;x+=CELL){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=0;y<=H;y+=CELL){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  // Territory
+  ctx.fillStyle='rgba(0,80,120,0.08)';ctx.fillRect(0,0,W/2,H);ctx.fillStyle='rgba(120,60,0,0.08)';ctx.fillRect(W/2,0,W/2,H);
+  ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=3;ctx.setLineDash([8,6]);ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();ctx.setLineDash([]);
+  // Territory shading
+  const grad1=ctx.createLinearGradient(0,0,W/2,0);grad1.addColorStop(0,'rgba(0,150,255,0.06)');grad1.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=grad1;ctx.fillRect(0,0,W/2,H);
+  const grad2=ctx.createLinearGradient(W/2,0,W,0);grad2.addColorStop(0,'rgba(0,0,0,0)');grad2.addColorStop(1,'rgba(255,100,0,0.06)');ctx.fillStyle=grad2;ctx.fillRect(W/2,0,W/2,H);
+
+  // LAVA ZONE
+  {const lavaMinY=gs.lavaY,lavaMaxY=lavaMinY+4;const lavaPulse=0.15+0.1*Math.sin(animTime*3);const lavaX=LAVA_COLS_MIN*CELL,lavaW=(LAVA_COLS_MAX-LAVA_COLS_MIN+1)*CELL;const lavaYp=lavaMinY*CELL,lavaH=(lavaMaxY-lavaMinY+1)*CELL;const lavaGrad=ctx.createRadialGradient(lavaX+lavaW/2,lavaYp+lavaH/2,20,lavaX+lavaW/2,lavaYp+lavaH/2,Math.max(lavaW,lavaH));lavaGrad.addColorStop(0,'rgba(255,60,0,'+lavaPulse+')');lavaGrad.addColorStop(0.5,'rgba(200,30,0,'+lavaPulse*0.5+')');lavaGrad.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=lavaGrad;ctx.fillRect(lavaX-60,lavaYp-60,lavaW+120,lavaH+120);ctx.fillStyle='rgba(180,40,0,'+(0.2+lavaPulse)+')';ctx.fillRect(lavaX,lavaYp,lavaW,lavaH);ctx.save();for(let hy=lavaYp;hy<lavaYp+lavaH;hy+=8){const offset=Math.sin(animTime*3+hy*0.1)*2;ctx.globalAlpha=0.08;ctx.fillStyle='#f80';ctx.fillRect(lavaX+offset,hy,lavaW,4)}ctx.restore();ctx.strokeStyle='rgba(255,100,0,'+(0.4+lavaPulse)+')';ctx.lineWidth=3;ctx.strokeRect(lavaX,lavaYp,lavaW,lavaH);for(let bi=lavaBubbles.length-1;bi>=0;bi--){const lb=lavaBubbles[bi];lb.y+=lb.vy*0.016;lb.life-=0.016;if(lb.life<=0){lavaBubbles.splice(bi,1);continue}const a=clamp(lb.life/lb.maxLife,0,1);ctx.fillStyle='rgba(255,120,0,'+a*0.8+')';ctx.beginPath();ctx.arc(lb.x,lb.y,3*a,0,Math.PI*2);ctx.fill()}if(Math.random()<0.15&&lavaBubbles.length<60){lavaBubbles.push({x:lavaX+rng(0,lavaW),y:lavaYp+rng(0,lavaH),vy:rng(-40,-20),life:rng(0.3,0.8),maxLife:0.8})}ctx.fillStyle='rgba(255,100,0,0.6)';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText('LAVA ZONE',lavaX+lavaW/2,lavaYp-8);ctx.fillText('-'+LAVA_DMG_PER_SEC+'/s',lavaX+lavaW/2,lavaYp+lavaH+14)}
+
+  // Build flashes
+  for(const f of buildFlashes){
+    if(f.msg){const a=Math.min(1,f.timer/f.maxTimer);ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(f.x-200,f.y-25,400,50);ctx.strokeStyle='#ff0';ctx.lineWidth=2;ctx.strokeRect(f.x-200,f.y-25,400,50);ctx.fillStyle='rgba(255,255,0,'+a+')';ctx.font='bold 20px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(f.msg,f.x,f.y)}
+    else{const a=f.timer/f.maxTimer;ctx.fillStyle='rgba(255,255,255,'+a*0.5+')';ctx.fillRect(f.x-CELL/2-4,f.y-CELL/2-4,CELL+8,CELL+8)}
+  }
+
+  // CONVEYORS
+  for(const b of gs.buildings){if(b.type!==1)continue;const bc=gridCtr(b.gx,b.gy),conn=b.connected,fill=pcc(b.owner,conn),bdr=pcb(b.owner,conn);
+    ctx.fillStyle=fill;ctx.fillRect(bc.x-CELL/2+2,bc.y-CELL/2+2,CELL-4,CELL-4);
+    if(conn){ctx.fillStyle=b.owner===0?'rgba(0,255,255,0.12)':'rgba(255,160,0,0.12)';ctx.fillRect(bc.x-CELL/2+2,bc.y-CELL/2+2,CELL-4,CELL-4)}
+    ctx.strokeStyle=bdr;ctx.lineWidth=conn?3:2;ctx.strokeRect(bc.x-CELL/2+2,bc.y-CELL/2+2,CELL-4,CELL-4);
+    if(conn){ctx.fillStyle='#0f0';ctx.beginPath();ctx.arc(bc.x,bc.y,4,0,Math.PI*2);ctx.fill()}else{ctx.fillStyle='#f44';ctx.globalAlpha=0.6;ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('x',bc.x,bc.y);ctx.globalAlpha=1}
+    if(conn){ctx.save();ctx.translate(bc.x,bc.y);const co=gs.cores[b.owner],ang=Math.atan2(co.y-bc.y,co.x-bc.x),snap=Math.round(ang/(Math.PI/2))*(Math.PI/2);ctx.rotate(snap);const offset=(animTime*120)%28;ctx.fillStyle='#fff';ctx.globalAlpha=0.7;for(let i=-1;i<=1;i++){const ox=-14+i*28+offset;if(ox>-CELL/2&&ox<CELL/2){ctx.beginPath();ctx.moveTo(ox-5,-4);ctx.lineTo(ox+5,0);ctx.lineTo(ox-5,4);ctx.fill()}}ctx.globalAlpha=1;ctx.restore()}
+  }
+  ctx.globalAlpha=1;
+
+  // WALLS
+  for(const b of gs.buildings){if(b.type!==2)continue;const bc=gridCtr(b.gx,b.gy),fill=pwc(b.owner),bdr=pwb(b.owner);
+    ctx.fillStyle=fill;ctx.fillRect(bc.x-CELL/2+1,bc.y-CELL/2+1,CELL-2,CELL-2);
+    ctx.strokeStyle=bdr;ctx.lineWidth=1.5;ctx.globalAlpha=0.5;for(let i=-1;i<=2;i++){const ox=i*14;ctx.beginPath();ctx.moveTo(bc.x-CELL/2+ox,bc.y-CELL/2);ctx.lineTo(bc.x-CELL/2+ox+14,bc.y+CELL/2);ctx.stroke();ctx.beginPath();ctx.moveTo(bc.x-CELL/2+ox,bc.y+CELL/2);ctx.lineTo(bc.x-CELL/2+ox+14,bc.y-CELL/2);ctx.stroke()}ctx.globalAlpha=1;
+    ctx.strokeStyle=bdr;ctx.lineWidth=3;ctx.strokeRect(bc.x-CELL/2+1,bc.y-CELL/2+1,CELL-2,CELL-2);
+    if(b.hp<b.maxHp){const pct=b.hp/b.maxHp;ctx.fillStyle='#300';ctx.fillRect(bc.x-CELL/2,bc.y-CELL/2-8,CELL,5);ctx.fillStyle='#0c0';ctx.fillRect(bc.x-CELL/2,bc.y-CELL/2-8,CELL*pct,5)}
+  }
+
+  // TURRETS
+  for(const b of gs.buildings){if(b.type!==3)continue;const bc=gridCtr(b.gx,b.gy),col=ptb(b.owner),fill=ptc(b.owner);
+    ctx.strokeStyle=col;ctx.lineWidth=1;ctx.globalAlpha=0.15;ctx.beginPath();ctx.arc(bc.x,bc.y,TURR_RANGE,0,Math.PI*2);ctx.stroke();ctx.setLineDash([4,8]);ctx.globalAlpha=0.08;ctx.beginPath();ctx.arc(bc.x,bc.y,TURR_RANGE,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    const ts=14;ctx.fillStyle=fill;ctx.fillRect(bc.x-ts,bc.y-ts,ts*2,ts*2);ctx.strokeStyle=col;ctx.lineWidth=3;ctx.strokeRect(bc.x-ts,bc.y-ts,ts*2,ts*2);
+    ctx.fillStyle=col;ctx.globalAlpha=0.5;ctx.beginPath();ctx.moveTo(bc.x,bc.y-8);ctx.lineTo(bc.x+6,bc.y);ctx.lineTo(bc.x,bc.y+8);ctx.lineTo(bc.x-6,bc.y);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+    const ep=1-b.owner,em=gs.mechs[ep];let aimAng=Math.atan2(em.y-bc.y,em.x-bc.x);if(em.dead){const eco=gs.cores[ep];aimAng=Math.atan2(eco.y-bc.y,eco.x-bc.x)}ctx.strokeStyle=col;ctx.lineWidth=4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(bc.x,bc.y);ctx.lineTo(bc.x+Math.cos(aimAng)*22,bc.y+Math.sin(aimAng)*22);ctx.stroke();ctx.lineCap='butt';
+    if(b.hp<b.maxHp){const pct=b.hp/b.maxHp;ctx.fillStyle='#300';ctx.fillRect(bc.x-CELL/2,bc.y-CELL/2-8,CELL,5);ctx.fillStyle='#0c0';ctx.fillRect(bc.x-CELL/2,bc.y-CELL/2-8,CELL*pct,5)}
+  }
+
+  // SPAWNERS (diamond/rhombus shape)
+  for(const b of gs.buildings){if(b.type!==4)continue;const bc=gridCtr(b.gx,b.gy),col=psb(b.owner),fill=psc(b.owner);
+    const sz=14;ctx.save();ctx.translate(bc.x,bc.y);ctx.rotate(Math.PI/4);
+    ctx.fillStyle=fill;ctx.fillRect(-sz,-sz,sz*2,sz*2);
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.strokeRect(-sz,-sz,sz*2,sz*2);ctx.restore();
+    ctx.fillStyle=col;ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('S',bc.x,bc.y+1);
+    if(b.hp<b.maxHp){const pct=b.hp/b.maxHp;ctx.fillStyle='#300';ctx.fillRect(bc.x-CELL/2,bc.y-CELL/2-8,CELL,5);ctx.fillStyle='#0c0';ctx.fillRect(bc.x-CELL/2,bc.y-CELL/2-8,CELL*pct,5)}
+  }
+
+  // NODES — enhanced visuals
+  for(const n of gs.nodes){const nc=gridCtr(n.gx,n.gy),col=n.owner===0?P1C:n.owner===1?P2C:'#8a8';const isCenter=n.ownerPriority===-1;const glow=n.owner===0?'rgba(0,255,255,0.2)':n.owner===1?'rgba(255,100,0,0.2)':'rgba(100,140,100,0.15)';const pulse=1+Math.sin(animTime*2.5)*0.15;
+    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(nc.x,nc.y,30*pulse,0,Math.PI*2);ctx.fill();
+    if(n.owner>=0){const capturePulse=0.3+0.25*Math.sin(animTime*3+n.gx);ctx.strokeStyle=n.owner===0?'rgba(0,255,255,'+capturePulse+')':'rgba(255,102,0,'+capturePulse+')';ctx.lineWidth=3;ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6,px=nc.x+26*Math.cos(a),py=nc.y+26*Math.sin(a);i===0?ctx.moveTo(px,py):ctx.lineTo(px,py)}ctx.closePath();ctx.stroke()}
+    ctx.fillStyle=n.owner===0?'#0a3a3a':n.owner===1?'#3a1a0a':'#1a1a1a';ctx.strokeStyle=col;ctx.lineWidth=isCenter?4:3;
+    if(isCenter){ctx.beginPath();for(let i=0;i<8;i++){const a=Math.PI/4*i-Math.PI/8,px=nc.x+22*Math.cos(a),py=nc.y+22*Math.sin(a);i===0?ctx.moveTo(px,py):ctx.lineTo(px,py)}ctx.closePath();ctx.fill();ctx.stroke()}else{ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6,px=nc.x+20*Math.cos(a),py=nc.y+20*Math.sin(a);i===0?ctx.moveTo(px,py):ctx.lineTo(px,py)}ctx.closePath();ctx.fill();ctx.stroke()}
+    ctx.fillStyle=col;ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('E',nc.x,nc.y+1);
+    if(n.owner>=0){ctx.fillStyle=col;ctx.font='bold 9px monospace';ctx.fillText('P'+(n.owner+1),nc.x,nc.y+26)}else{ctx.fillStyle='#666';ctx.font='8px monospace';ctx.fillText(isCenter?'CONTESTED':'NEUTRAL',nc.x,nc.y+26)}
+    ctx.fillStyle=col;ctx.globalAlpha=0.4;ctx.font='7px monospace';ctx.fillText(isCenter?'CENTER':'NRG NODE',nc.x,nc.y-24);ctx.globalAlpha=1}
+  
+  // POWER-UPS
+  if(gs.powerUps)for(const pu of gs.powerUps){const pulse=1+Math.sin(pu.pulsePhase)*0.2;const col=pu.type===PU_SPEED?'#0f0':pu.type===PU_SHIELD?'#08f':'#f44';const glowCol=pu.type===PU_SPEED?'rgba(0,255,0,':pu.type===PU_SHIELD?'rgba(0,128,255,':'rgba(255,60,60,';ctx.fillStyle=glowCol+(0.1+0.05*Math.sin(pu.pulsePhase))+')';ctx.beginPath();ctx.arc(pu.x,pu.y,20*pulse,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(0,0,0,0.6)';ctx.beginPath();ctx.arc(pu.x,pu.y,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.arc(pu.x,pu.y,12,0,Math.PI*2);ctx.stroke();ctx.fillStyle=col;ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pu.type===PU_SPEED?'S':pu.type===PU_SHIELD?'D':'R',pu.x,pu.y);const tPct=pu.timer/30;ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(pu.x-10,pu.y+14,20,3);ctx.fillStyle=col;ctx.fillRect(pu.x-10,pu.y+14,20*tPct,3)}
+
+  // CORES — 2x2 cell core with original visual effects (effects don't affect placement)
+  for(let p=0;p<2;p++){const co=gs.cores[p],col=pcol(p),bg=pbg(p);const defenderDead=gs.mechs[p].dead;
+    drawCoreTendrils(co,p,gs);
+    // Rotating rings — orbit outside core (visual only)
+    for(let ring=0;ring<2;ring++){const ringR=CORE_SIZE/2+12+ring*12;const rot=animTime*(ring===0?0.5:-0.3);ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=0.2+0.15*Math.sin(animTime*3+ring*2);ctx.beginPath();for(let i=0;i<8;i++){const a=Math.PI/4*i+rot;const px2=co.x+Math.cos(a)*ringR,py2=co.y+Math.sin(a)*ringR;i===0?ctx.moveTo(px2,py2):ctx.lineTo(px2,py2)}ctx.closePath();ctx.stroke();ctx.globalAlpha=1}
+    // Vulnerability glow when defender dead
+    if(defenderDead){ctx.strokeStyle='rgba(255,0,0,'+(0.3+Math.sin(animTime*6)*0.2)+')';ctx.lineWidth=4;ctx.strokeRect(co.x-CORE_SIZE/2-6,co.y-CORE_SIZE/2-6,CORE_SIZE+12,CORE_SIZE+12)}
+    // Outer ambient glow
+    ctx.fillStyle=p===0?'rgba(0,255,255,0.15)':'rgba(255,100,0,0.15)';ctx.fillRect(co.x-CORE_SIZE/2-8,co.y-CORE_SIZE/2-8,CORE_SIZE+16,CORE_SIZE+16);
+    // Main core body — exactly 2x2 cells
+    const corePulse=1+Math.sin(animTime*2.5)*0.04;const pls=Math.sin(animTime*3)*3,hs=(CORE_SIZE/2+pls/2)*corePulse;ctx.fillStyle=bg;ctx.fillRect(co.x-hs,co.y-hs,hs*2,hs*2);ctx.strokeStyle=defenderDead?'#f44':col;ctx.lineWidth=defenderDead?4:3;ctx.strokeRect(co.x-hs,co.y-hs,hs*2,hs*2);ctx.fillStyle=col;ctx.globalAlpha=0.25+Math.sin(animTime*4)*0.1;ctx.fillRect(co.x-16,co.y-16,32,32);ctx.globalAlpha=1;
+    // HP bar above core
+    const pct=co.hp/co.maxHp;ctx.fillStyle='#300';ctx.fillRect(co.x-CORE_SIZE/2,co.y-CORE_SIZE/2-14,CORE_SIZE,8);ctx.fillStyle=pct>0.5?'#0c0':pct>0.25?'#cc0':'#c00';ctx.fillRect(co.x-CORE_SIZE/2,co.y-CORE_SIZE/2-14,CORE_SIZE*pct,8);ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.strokeRect(co.x-CORE_SIZE/2,co.y-CORE_SIZE/2-14,CORE_SIZE,8);ctx.fillStyle=col;ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.fillText(p===0?'P1 CORE':'P2 CORE',co.x,co.y+CORE_SIZE/2+18)}
+
+  // BULLETS
+  for(const b of gs.bullets){const col=b.owner===0?P1C:P2C;ctx.strokeStyle=b.reflected?'#fff':col;ctx.lineWidth=2;ctx.globalAlpha=0.4;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-b.vx*0.03,b.y-b.vy*0.03);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=b.reflected?'#fff':col;ctx.beginPath();ctx.arc(b.x,b.y,b.reflected?5:4,0,Math.PI*2);ctx.fill()}
+  for(const b of gs.tBullets){const col=b.owner===0?P1C:P2C;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.globalAlpha=0.3;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-b.vx*0.025,b.y-b.vy*0.025);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=col;ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill()}
+
+  // MOBS
+  if(gs.mobs){for(const mob of gs.mobs){const col=pmc(mob.owner);ctx.fillStyle=col;ctx.globalAlpha=0.7;ctx.beginPath();ctx.arc(mob.x,mob.y,MOB_R,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(mob.x,mob.y,MOB_R,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#000';ctx.globalAlpha=0.5;ctx.beginPath();ctx.arc(mob.x+Math.cos(mob.facing)*3,mob.y+Math.sin(mob.facing)*3,2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;if(mob.hp<mob.maxHp){const pct=mob.hp/mob.maxHp;ctx.fillStyle='#300';ctx.fillRect(mob.x-10,mob.y-MOB_R-6,20,3);ctx.fillStyle='#0c0';ctx.fillRect(mob.x-10,mob.y-MOB_R-6,20*pct,3)}}}
+
+  // MECHS
+  for(let p=0;p<2;p++){const m=gs.mechs[p];if(m.dead){ctx.fillStyle=pcol(p);ctx.globalAlpha=0.5;ctx.font='12px monospace';ctx.textAlign='center';ctx.fillText('RESPAWN '+Math.ceil(m.respawnTimer)+'s',m.x,m.y);ctx.globalAlpha=1;continue}
+    const mechShape=(p===myIndex)?playerShape:remotePlayerShape;
+    const mechCol=(p===myIndex)?(COLOR_MAP[playerColor]||pcol(p)):pcol(p);
+    const mechBg=(p===myIndex)?(COLOR_BG_MAP[playerColor]||pbg(p)):pbg(p);
+    const col=mechCol,bg=mechBg;
+    ctx.save();ctx.translate(m.x,m.y);ctx.rotate(m.facing);
+    if(m.invTimer>0&&Math.floor(m.invTimer*12)%2===0)ctx.globalAlpha=0.4;
+    if(m.dashing){ctx.globalAlpha=0.15;ctx.fillStyle=mechCol;ctx.beginPath();ctx.arc(0,0,MECH_R+12,0,Math.PI*2);ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=1;ctx.globalAlpha=0.4;for(let i=0;i<3;i++){const oy=(i-1)*8;ctx.beginPath();ctx.moveTo(-MECH_R-15,oy);ctx.lineTo(-MECH_R-3-(i*2),oy);ctx.stroke()}ctx.globalAlpha=m.invTimer>0&&Math.floor(m.invTimer*12)%2===0?0.4:1}
+    if(m.parrying){
+      // Shield HP arcs
+      if((m.shieldHp||0)>0){
+        const arcFraction=m.shieldHp/SHIELD_MAX_HP;
+        const shieldArcHalf=PARRY_ARC/2*arcFraction;
+        ctx.strokeStyle='#88f';ctx.lineWidth=4;ctx.globalAlpha=0.7;
+        ctx.beginPath();ctx.arc(0,0,MECH_R+14,-shieldArcHalf,shieldArcHalf);ctx.stroke();
+        ctx.fillStyle='rgba(150,150,255,0.08)';ctx.globalAlpha=0.5;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,MECH_R+14,-shieldArcHalf,shieldArcHalf);ctx.closePath();ctx.fill();
+        ctx.globalAlpha=0.8;
+        ctx.fillStyle='#fff';ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(m.shieldHp+'/'+SHIELD_MAX_HP,0,-MECH_R-22);
+      }else{
+        ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.globalAlpha=0.6;ctx.beginPath();ctx.arc(0,0,MECH_R+14,-PARRY_ARC/2,PARRY_ARC/2);ctx.stroke();ctx.fillStyle='rgba(200,200,255,0.12)';ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,MECH_R+14,-PARRY_ARC/2,PARRY_ARC/2);ctx.closePath();ctx.fill();
+      }
+      ctx.globalAlpha=m.invTimer>0&&Math.floor(m.invTimer*12)%2===0?0.4:1}
+    ctx.fillStyle=bg;ctx.strokeStyle=col;ctx.lineWidth=2;drawMechShape(ctx,mechShape,MECH_R);ctx.fill();ctx.stroke();
+    ctx.fillStyle=col;ctx.globalAlpha*=0.5;ctx.beginPath();ctx.arc(-MECH_R+5,0,4,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=m.invTimer>0&&Math.floor(m.invTimer*12)%2===0?0.4:1;
+    if(m.meleeing){const prog=1-m.meleeTimer/MELEE_DUR,ext=prog<0.45?prog/0.45*MELEE_RANGE:(1-prog)/0.55*MELEE_RANGE;ctx.fillStyle='#ff0';ctx.globalAlpha*=0.85;ctx.fillRect(MECH_R,-5,ext,10);ctx.fillStyle='#fff';ctx.fillRect(MECH_R+ext-4,-6,8,12);ctx.globalAlpha=m.invTimer>0&&Math.floor(m.invTimer*12)%2===0?0.4:1}
+    else{ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(MECH_R,-4);ctx.lineTo(MECH_R+10,-4);ctx.stroke();ctx.beginPath();ctx.moveTo(MECH_R,4);ctx.lineTo(MECH_R+10,4);ctx.stroke();if(m.shootCd>SHOOT_CD*0.7){ctx.fillStyle='#fff';ctx.globalAlpha*=0.7;ctx.beginPath();ctx.arc(MECH_R+12,0,5,0,Math.PI*2);ctx.fill();ctx.globalAlpha=m.invTimer>0&&Math.floor(m.invTimer*12)%2===0?0.4:1}}
+    ctx.globalAlpha=1;ctx.restore();
+    const barW=42,barH=5,bx=m.x-barW/2,by=m.y-MECH_R-16;ctx.fillStyle='#300';ctx.fillRect(bx,by,barW,barH);ctx.fillStyle=m.hp>60?'#0c0':m.hp>30?'#cc0':'#c00';ctx.fillRect(bx,by,barW*(m.hp/m.maxHp),barH);ctx.strokeStyle='#555';ctx.lineWidth=0.5;ctx.strokeRect(bx,by,barW,barH);ctx.fillStyle=col;ctx.font='9px monospace';ctx.textAlign='center';ctx.fillText('P'+(p+1),m.x,m.y-MECH_R-20)}
+
+  // PARTICLES
+  if(gs.particles)for(const p2 of gs.particles){const a=clamp(p2.life/p2.maxLife,0,1);ctx.fillStyle=p2.color;ctx.globalAlpha=a;ctx.beginPath();ctx.arc(p2.x,p2.y,p2.r*a,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
+
+  // Floating damage texts
+  drawFloatingTexts();
+
+  // Kill feed
+  drawKillFeed();
+
+  // BUILD PREVIEW
+  if(buildMode>0&&gs.phase==='playing'){const gx=Math.floor(mouseX/CELL),gy=Math.floor(mouseY/CELL);if(gx>=0&&gx<COLS&&gy>=0&&gy<ROWS){const bc=gridCtr(gx,gy),valid=canPlaceBuild(gs,myIndex,gx,gy,buildMode);ctx.fillStyle=valid?'rgba(0,255,0,0.25)':'rgba(255,0,0,0.25)';ctx.fillRect(bc.x-CELL/2,bc.y-CELL/2,CELL,CELL);ctx.strokeStyle=valid?'#0f0':'#f00';ctx.lineWidth=3;ctx.setLineDash([4,2]);ctx.strokeRect(bc.x-CELL/2,bc.y-CELL/2,CELL,CELL);ctx.setLineDash([]);ctx.fillStyle=valid?'#0f0':'#f00';ctx.font='bold 18px monospace';ctx.textAlign='center';ctx.textBaseline='middle';const icon=buildMode===1?'>':buildMode===2?'#':buildMode===3?'T':'S';ctx.fillText(icon,bc.x,bc.y);const cost=buildMode===1?CONV_COST:buildMode===2?WALL_COST:buildMode===3?TURR_COST:SPAWNER_COST,bname=buildMode===1?'CONVEYOR':buildMode===2?'WALL':buildMode===3?'TURRET':'SPAWNER';ctx.font='bold 9px monospace';ctx.fillText(bname+' -'+cost+'E',bc.x,bc.y+26)}}
+
+  drawHUD(gs);
+  ctx.restore(); // screen shake
+}
+
+function drawHUD(gs){
+  if(!gs)return;const p=myIndex;
+  if(gs.phase==='countdown'){ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);const num=Math.ceil(gs.countdown),txt=num>0?''+num:'GO!';ctx.fillStyle=num>0?'#0ff':'#0f0';ctx.font='bold 100px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=30;ctx.fillText(txt,W/2,H/2);ctx.shadowBlur=0;ctx.font='22px monospace';ctx.fillStyle='#aaa';ctx.fillText('GET READY!',W/2,H/2+70);if(practiceMode){ctx.fillStyle=aiPaused?'#ff0':'#0f0';ctx.font='16px monospace';ctx.fillText(aiPaused?'[ PAUSED — Press P ]':'[ SOLO PRACTICE ]',W/2,H/2+100)}return}
+  if(gs.phase==='gameover'){ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);const wcol=gs.winner===0?P1C:P2C;ctx.fillStyle=wcol;ctx.font='bold 56px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor=wcol;ctx.shadowBlur=20;ctx.fillText('PLAYER '+(gs.winner+1)+' WINS!',W/2,H/2);ctx.shadowBlur=0;const bx=W/2-120,by=H/2+55,bw=240,bh=44;ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(bx,by,bw,bh);ctx.strokeStyle='#0ff';ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);ctx.fillStyle='#0ff';ctx.font='bold 16px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('BACK TO MENU',W/2,by+bh/2);return}
+  const m=gs.mechs[p],e=gs.energy[p],cn=gs.connectedNodes[p],col=pcol(p);
+  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(10,10,270,140);ctx.strokeStyle=col;ctx.lineWidth=2;ctx.strokeRect(10,10,270,140);
+  ctx.font='bold 12px monospace';ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='#aaa';ctx.fillText('MECH',20,16);ctx.fillStyle='#300';ctx.fillRect(70,16,180,12);const mhp=Math.max(0,m.hp)/m.maxHp;ctx.fillStyle=mhp>0.5?'#0c0':mhp>0.25?'#cc0':'#c00';ctx.fillRect(70,16,180*mhp,12);ctx.fillStyle='#fff';ctx.font='9px monospace';ctx.fillText(Math.ceil(Math.max(0,m.hp))+'/'+m.maxHp,72,17);
+  ctx.font='bold 12px monospace';ctx.fillStyle='#aaa';ctx.fillText('NRG',20,34);ctx.fillStyle='#003';ctx.fillRect(70,34,180,12);ctx.fillStyle='#08f';ctx.fillRect(70,34,180*(e/MAX_ENERGY),12);ctx.fillStyle='#fff';ctx.font='9px monospace';ctx.fillText(Math.floor(e)+'/'+MAX_ENERGY,72,35);ctx.font='9px monospace';ctx.fillStyle='#0a8';const rate=BASE_ENERGY_RATE+cn*NODE_RATE;ctx.fillText('+'+rate.toFixed(1)+'/s',220,36);
+  ctx.font='bold 12px monospace';ctx.fillStyle='#aaa';ctx.fillText('NODES',20,52);ctx.fillStyle='#ff0';ctx.fillText(cn+'/'+NODE_POS.length,80,52);
+  ctx.fillStyle='#aaa';ctx.font='11px monospace';ctx.fillText('Core: '+Math.ceil(Math.max(0,gs.cores[p].hp))+'/'+CORE_HP,20,72);
+  ctx.fillStyle=m.dashCd<=0?'#0f0':'#555';ctx.font='11px monospace';ctx.fillText('Dash: '+(m.dashCd<=0?'READY':m.dashCd.toFixed(1)+'s'),20,88);
+  ctx.fillStyle=m.meleeCd<=0?'#0f0':'#555';ctx.fillText('Melee: '+(m.meleeCd<=0?'READY':m.meleeCd.toFixed(1)+'s'),130,88);
+  if(gs.turretPlaceCd[p]>0){ctx.fillStyle='#ff0';ctx.font='10px monospace';ctx.fillText('Turret CD: '+gs.turretPlaceCd[p].toFixed(1)+'s',20,104)}
+  if(gs.spawnerPlaceCd[p]>0){ctx.fillStyle='#ff0';ctx.font='10px monospace';ctx.fillText('Spawner CD: '+gs.spawnerPlaceCd[p].toFixed(1)+'s',130,104)}
+  if(gs.convPlaceCd[p]>0){ctx.fillStyle='#ff0';ctx.font='10px monospace';ctx.fillText('Conv CD: '+gs.convPlaceCd[p].toFixed(1)+'s',20,118)}
+  // Upgrade levels
+  const myUpgS=gs.upgStrike[myIndex],myUpgB=gs.upgBullet[myIndex],myUpgF=gs.upgFort[myIndex];
+  ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(10,H-145,280,30);
+  ctx.font='10px monospace';ctx.textAlign='left';
+  ctx.fillStyle=myUpgS>=3?'#ff0':myUpgS>0?'#0f0':'#555';ctx.fillText('[8]Strike:'+myUpgS+'/3'+(myUpgS<3?' ('+UPG_STRIKE_COSTS[myUpgS]+'E)':' MAX'),20,H-127);
+  ctx.fillStyle=myUpgB>=3?'#ff0':myUpgB>0?'#0f0':'#555';ctx.fillText('[9]Bullet:'+myUpgB+'/3'+(myUpgB<3?' ('+UPG_BULLET_COSTS[myUpgB]+'E)':' MAX'),20,H-115);
+  ctx.fillStyle=myUpgF>=3?'#ff0':myUpgF>0?'#0f0':'#555';ctx.fillText('[0]Fortify:'+myUpgF+'/3'+(myUpgF<3?' ('+UPG_FORT_COSTS[myUpgF]+'E)':' MAX'),20,H-103);
+  // Active power-up indicators
+  let puX=170;
+  if(gs.puSpeedTimer[myIndex]>0){ctx.fillStyle='#0f0';ctx.globalAlpha=0.7+0.3*Math.sin(animTime*6);ctx.fillRect(puX,62,24,12);ctx.globalAlpha=1;ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText('SPD',puX+12,72);puX+=28}
+  if(gs.puShieldHp[myIndex]>0){ctx.fillStyle='#08f';ctx.globalAlpha=0.7+0.3*Math.sin(animTime*6);ctx.fillRect(puX,62,24,12);ctx.globalAlpha=1;ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText('SHD',puX+12,72);puX+=28}
+  if(gs.puRapidTimer[myIndex]>0){ctx.fillStyle='#f44';ctx.globalAlpha=0.7+0.3*Math.sin(animTime*6);ctx.fillRect(puX,62,24,12);ctx.globalAlpha=1;ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText('RPD',puX+12,72);puX+=28}
+  const anyDisc=gs.buildings.some(b=>b.owner===p&&b.type===1&&!b.connected);if(anyDisc){ctx.fillStyle='#f80';ctx.font='9px monospace';ctx.fillText('! Some conveyors disconnected',20,122)}
+  if(practiceMode&&aiPaused){ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(W/2-120,2,240,28);ctx.strokeStyle='#ff0';ctx.lineWidth=1.5;ctx.strokeRect(W/2-120,2,240,28);ctx.fillStyle='#ff0';ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillText('PAUSED BOT - Press P',W/2,20)}
+  if(buildMode>0){const bname=buildMode===1?'CONVEYOR':buildMode===2?'WALL':buildMode===3?'TURRET':'SPAWNER',bcost=buildMode===1?CONV_COST:buildMode===2?WALL_COST:buildMode===3?TURR_COST:SPAWNER_COST,canAfford=e>=bcost;ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(W/2-140,H-50,280,40);ctx.strokeStyle=canAfford?'#0f0':'#f00';ctx.lineWidth=2;ctx.strokeRect(W/2-140,H-50,280,40);ctx.fillStyle=canAfford?'#0f0':'#f44';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText('Placing: '+bname+' (-'+bcost+'E)',W/2,H-22)}
+  ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(10,H-110,280,100);ctx.fillStyle='#777';ctx.font='10px monospace';ctx.textAlign='left';const y0=H-100;ctx.fillStyle='#0ff';ctx.fillText('[1] Conveyor (-'+CONV_COST+'E)',20,y0);ctx.fillStyle='#f60';ctx.fillText('[2] Wall (-'+WALL_COST+'E)',170,y0);ctx.fillStyle='#0f0';ctx.fillText('[3] Turret (-'+TURR_COST+'E)'+(gs.turretPlaceCd[myIndex]>0?' CD:'+gs.turretPlaceCd[myIndex].toFixed(1):''),20,y0+14);ctx.fillStyle='#ff0';ctx.fillText('[4] Spawner (-'+SPAWNER_COST+'E)'+(gs.spawnerPlaceCd[myIndex]>0?' CD:'+gs.spawnerPlaceCd[myIndex].toFixed(1):''),170,y0+14);ctx.fillStyle='#888';ctx.fillText('[Q] Parry  [Space] Dash  [P] Pause Bot',20,y0+28);ctx.fillText('[LMB] Shoot/Place  [RMB] Melee  [WASD] Move',20,y0+42);
+  const ep=1-p,em=gs.mechs[ep],eco=gs.cores[ep],ecol=pcol(ep);ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(W-270,10,260,140);ctx.strokeStyle=ecol;ctx.lineWidth=2;ctx.strokeRect(W-270,10,260,140);ctx.font='bold 12px monospace';ctx.textAlign='left';ctx.fillStyle='#aaa';ctx.fillText('ENEMY',W-260,16);ctx.fillStyle='#300';ctx.fillRect(W-190,16,170,12);const ehp=Math.max(0,em.hp)/em.maxHp;ctx.fillStyle=ehp>0.5?'#0c0':ehp>0.25?'#cc0':'#c00';ctx.fillRect(W-190,16,170*ehp,12);ctx.fillStyle='#888';ctx.font='10px monospace';ctx.fillText('Core: '+Math.ceil(Math.max(0,eco.hp))+'/'+CORE_HP+'  Nodes: '+gs.connectedNodes[ep]+'  NRG: '+Math.floor(gs.energy[ep]),W-260,38);
+  ctx.fillText(em.dead?'RESPAWNING...':'ACTIVE',W-260,52);
+  // Melee CD
+  ctx.fillStyle=em.meleeCd<=0?'#0f0':'#555';ctx.font='9px monospace';ctx.fillText('Melee: '+(em.meleeCd<=0?'READY':em.meleeCd.toFixed(1)+'s'),W-260,66);
+  // Dash CD
+  ctx.fillStyle=em.dashCd<=0?'#0f0':'#555';ctx.fillText('Dash: '+(em.dashCd<=0?'READY':em.dashCd.toFixed(1)+'s'),W-130,66);
+  // Enemy cooldowns
+  if(gs.turretPlaceCd[ep]>0){ctx.fillStyle='#ff0';ctx.font='9px monospace';ctx.fillText('Turr CD:'+gs.turretPlaceCd[ep].toFixed(1)+'s',W-260,80)}
+  if(gs.spawnerPlaceCd[ep]>0){ctx.fillStyle='#ff0';ctx.font='9px monospace';ctx.fillText('Spwn CD:'+gs.spawnerPlaceCd[ep].toFixed(1)+'s',W-130,80)}
+  if(gs.convPlaceCd[ep]>0){ctx.fillStyle='#ff0';ctx.font='9px monospace';ctx.fillText('Conv CD:'+gs.convPlaceCd[ep].toFixed(1)+'s',W-260,94)}
+  // Power-up indicators
+  let epuX=W-260;
+  if(gs.puSpeedTimer[ep]>0){ctx.fillStyle='#0f0';ctx.globalAlpha=0.7+0.3*Math.sin(animTime*6);ctx.fillRect(epuX,100,22,11);ctx.globalAlpha=1;ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillText('SPD',epuX+11,109);epuX+=26}
+  if(gs.puShieldHp[ep]>0){ctx.fillStyle='#08f';ctx.globalAlpha=0.7+0.3*Math.sin(animTime*6);ctx.fillRect(epuX,100,22,11);ctx.globalAlpha=1;ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillText('SHD',epuX+11,109);epuX+=26}
+  if(gs.puRapidTimer[ep]>0){ctx.fillStyle='#f44';ctx.globalAlpha=0.7+0.3*Math.sin(animTime*6);ctx.fillRect(epuX,100,22,11);ctx.globalAlpha=1;ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillText('RPD',epuX+11,109);epuX+=26}
+  // Upgrades
+  const enUpgS=gs.upgStrike[ep],enUpgB=gs.upgBullet[ep],enUpgF=gs.upgFort[ep];
+  ctx.font='8px monospace';ctx.textAlign='left';
+  ctx.fillStyle=enUpgS>=3?'#ff0':enUpgS>0?'#0f0':'#555';ctx.fillText('Strk:'+enUpgS,W-260,122);
+  ctx.fillStyle=enUpgB>=3?'#ff0':enUpgB>0?'#0f0':'#555';ctx.fillText('Bull:'+enUpgB,W-200,122);
+  ctx.fillStyle=enUpgF>=3?'#ff0':enUpgF>0?'#0f0':'#555';ctx.fillText('Fort:'+enUpgF,W-140,122);
+  if(practiceMode){ctx.fillStyle='#0f0';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.fillText('[ SOLO PRACTICE ]',W/2,18)}const mins=Math.floor(gs.time/60),secs=Math.floor(gs.time%60);ctx.fillStyle='#444';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText((mins<10?'0':'')+mins+':'+(secs<10?'0':'')+secs,W/2,18+(practiceMode?14:0));
+  if(!practiceMode&&pingMs>0){ctx.fillStyle=pingMs<80?'#0f0':pingMs<150?'#ff0':'#f00';ctx.font='10px monospace';ctx.textAlign='right';ctx.fillText('Ping: '+pingMs+'ms',W-10,18)}
+}
+
+/*** GAME LOOP ***/
+let gameTickInterval=null;
+
+// Worker-driven tick: runs even when the host's tab is in the background.
+// The Web Worker (BackgroundKeepAlive.worker) posts 'tick' every TICK seconds;
+// workers are NOT throttled by the browser, so this keeps the host's authoritative
+// simulation alive while the host is on another tab. The silent Web Audio oscillator
+// additionally prevents the main thread from being throttled, so messages are
+// processed in real time (smooth 30 Hz) rather than in 1 Hz bursts.
+let _lastNetSync=0;
+function onWorkerTick(){
+  if(!gameState)return;
+  if(isHost||practiceMode){
+    if(gameState.phase!=='gameover'&&gameState.phase!=='menu'){
+      updateGame(gameState,TICK);
+    }
+    // Send state to guest every 50ms (matches v6_2 cadence)
+    if(!practiceMode&&connected){
+      const now=performance.now();
+      if(now-_lastNetSync>50){
+        const statePayload=stripStateForNetwork(gameState);
+        const serialized=JSON.stringify(statePayload);
+        if(serialized.length<16384){
+          relaySend({action:'data',payload:{t:'s',s:statePayload}});
+          _lastNetSync=now;
+        }
+      }
+    }
+  }else{
+    // Guest: send input to host every 33ms (matches v6_2 cadence)
+    if(connected){
+      const now=performance.now();
+      if(now-_lastNetSync>33){
+        const inp=captureInput();
+        relaySend({action:'data',payload:{t:'i',...inp,playerShape,playerColor}});
+        _lastNetSync=now;
+      }
+    }
+  }
+}
+
+// Fallback ticker: only fires if the Web Worker is unavailable.
+// When BackgroundKeepAlive is active, this is a no-op because the worker
+// already drives ticks at full speed (even in background tabs).
+function startGameTicks(){
+  if(gameTickInterval)return;
+  gameTickInterval=setInterval(()=>{
+    if(BackgroundKeepAlive.active)return; // worker drives ticks
+    if(!gameState)return;
+    if(isHost||practiceMode){
+      if(gameState.phase!=='gameover'&&gameState.phase!=='menu'){
+        updateGame(gameState,TICK);
+      }
+      // Fallback state sync (only used if worker unavailable)
+      if(!practiceMode&&connected){
+        const now=performance.now();
+        if(now-_lastNetSync>50){
+          const statePayload=stripStateForNetwork(gameState);
+          const serialized=JSON.stringify(statePayload);
+          if(serialized.length<16384){
+            relaySend({action:'data',payload:{t:'s',s:statePayload}});
+            _lastNetSync=now;
+          }
+        }
+      }
+    }else if(connected){
+      // Fallback guest input sync (only used if worker unavailable)
+      const now=performance.now();
+      if(now-_lastNetSync>33){
+        const inp=captureInput();
+        relaySend({action:'data',payload:{t:'i',...inp,playerShape,playerColor}});
+        _lastNetSync=now;
+      }
+    }
+  },Math.round(TICK*1000));
+}
+
+function stopGameTicks(){if(gameTickInterval){clearInterval(gameTickInterval);gameTickInterval=null}}
+
+// Guest interpolation
+let prevGuestState=null,curGuestState=null,guestStateTime=0;
+function setGuestState(s){if(!s||!s.mechs||!s.cores)return;if(curGuestState)prevGuestState=curGuestState;curGuestState=s;guestStateTime=performance.now()}
+function lerp(a,b,t){return a+(b-a)*t}
+function interpolateGuestState(){
+  if(!curGuestState)return null;
+  if(!prevGuestState)return curGuestState;
+  const elapsed=performance.now()-guestStateTime;
+  const t=clamp(elapsed/50,0,1);
+  // FIX: Lerp directly on curGuestState (read-only render)
+  // Instead of deep-cloning, just adjust mech positions for rendering
+  const s=curGuestState;
+  const lerpCache=[];
+  for(let p=0;p<2;p++){
+    if(prevGuestState.mechs&&prevGuestState.mechs[p]&&curGuestState.mechs&&curGuestState.mechs[p]){
+      const pm=prevGuestState.mechs[p],cm=curGuestState.mechs[p];
+      if(!pm.dead&&!cm.dead){
+        lerpCache.push({p,x:lerp(pm.x,cm.x,t),y:lerp(pm.y,cm.y,t)});
+      }
+    }
+  }
+  // Apply lerp temporarily for render, then restore
+  for(const lc of lerpCache){
+    s.mechs[lc.p]._origX=s.mechs[lc.p].x;
+    s.mechs[lc.p]._origY=s.mechs[lc.p].y;
+    s.mechs[lc.p].x=lc.x;
+    s.mechs[lc.p].y=lc.y;
+  }
+  // We return a flag to restore after render
+  s._lerpCache=lerpCache;
+  return s;
+}
+
+function gameLoop(ts){
+  requestAnimationFrame(gameLoop);
+  const dt=Math.min((ts-lastTime)/1000,0.1);lastTime=ts;
+  if(!gameState){ctx.fillStyle='#0a0a1e';ctx.fillRect(0,0,W,H);return}
+
+  // NOTE: game ticks + network sync are driven by onWorkerTick() (Web Worker heartbeat),
+  // which keeps running even when this tab is in the background. This rAF callback is
+  // rendering-only, so the host's game no longer pauses when they switch tabs.
+  if(isHost||practiceMode){
+    animTime=gameState.time;
+    render(gameState);
+  }else{
+    if(gameState){
+      const renderState=interpolateGuestState()||gameState;
+      animTime=renderState.time;
+      render(renderState);
+      // FIX: Restore lerped positions after render
+      if(renderState._lerpCache){
+        for(const lc of renderState._lerpCache){
+          renderState.mechs[lc.p].x=renderState.mechs[lc.p]._origX;
+          renderState.mechs[lc.p].y=renderState.mechs[lc.p]._origY;
+          delete renderState.mechs[lc.p]._origX;
+          delete renderState.mechs[lc.p]._origY;
+        }
+        delete renderState._lerpCache;
+      }
+    }
+  }
+}
+
+lastTime=performance.now();
+
+// Auto-detect relay URL from query params
+(function(){
+  const params=new URLSearchParams(location.search);
+  const sel=document.getElementById('relay-select');
+  if(params.has('server')){
+    const sv=params.get('server').toLowerCase();
+    if(sv==='amvera'&&sel){sel.value='amvera';onRelaySelectChange()}
+    else if(sv==='replit'&&sel){sel.value='replit';onRelaySelectChange()}
+  } else if(params.has('relay')){
+    if(sel){sel.value='custom'}
+    document.getElementById('custom-url-row').style.display='block';
+    document.getElementById('relay-url-input').value=params.get('relay');
+  }
+})();
+
+// ===== PLAYER CUSTOMIZATION =====
+function onColorChange(val){
+  playerColor=val;localStorage.setItem('cc_color',val);
+  // Update swatch selection
+  document.querySelectorAll('#color-picker .color-swatch').forEach(el=>{
+    el.classList.toggle('selected',el.dataset.color===val);
+  });
+}
+function onShapeChange(val){playerShape=val;localStorage.setItem('cc_shape',val)}
+
+function initCustomization(){
+  // Build color swatch picker
+  const picker=document.getElementById('color-picker');
+  if(picker){
+    picker.innerHTML='';
+    PLAYER_COLORS.forEach(c=>{
+      const hex=COLOR_MAP[c]||'#888';
+      const sw=document.createElement('div');
+      sw.className='color-swatch'+(c===playerColor?' selected':'');
+      sw.style.backgroundColor=hex;
+      sw.style.color=hex;
+      sw.dataset.color=c;
+      sw.title=c.charAt(0).toUpperCase()+c.slice(1);
+      sw.addEventListener('click',()=>onColorChange(c));
+      picker.appendChild(sw);
+    });
+  }
+  const sel=document.getElementById('shape-select');
+  if(sel)sel.value=playerShape;
+}
+
+function drawMechShape(ctx,shape,r){
+  ctx.beginPath();
+  switch(shape){
+    case'diamond':ctx.moveTo(r+5,0);ctx.lineTo(0,-r+2);ctx.lineTo(-r+8,0);ctx.lineTo(0,r-2);ctx.closePath();break;
+    case'triangle':ctx.moveTo(r+5,0);ctx.lineTo(-r+2,-r+2);ctx.lineTo(-r+2,r-2);ctx.closePath();break;
+    case'square':ctx.rect(-r+4,-r+4,(r-4)*2,(r-4)*2);break;
+    case'circle':ctx.arc(0,0,r-2,0,Math.PI*2);break;
+    case'star':{
+      const spikes=5,outerR=r+2,innerR=r*0.45;
+      let rot=-Math.PI/2;
+      for(let i=0;i<spikes;i++){
+        ctx.lineTo(Math.cos(rot)*outerR,Math.sin(rot)*outerR);rot+=Math.PI/spikes;
+        ctx.lineTo(Math.cos(rot)*innerR,Math.sin(rot)*innerR);rot+=Math.PI/spikes;
+      }
+      ctx.closePath();break;
+    }
+    default:ctx.moveTo(r+5,0);ctx.lineTo(-r+2,-r+2);ctx.lineTo(-r+8,0);ctx.lineTo(-r+2,r-2);ctx.closePath();break;
+  }
+}
+
+initCustomization();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
